@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>課堂獎勵加減分系統</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <!-- Vue.js 3 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.prod.js"></script>
+    <!-- SheetJS for Excel export CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Canvas-Confetti for celebration CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <!-- FontAwesome 6 Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Noto Sans TC CDN -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f8fafc;
+        }
+        [v-cloak] { display: none; }
+        /* 自訂極細滾動條 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col">
+    <div id="app" v-cloak class="flex-grow flex flex-col">
+        <!-- 頂部導覽列：包含精簡版控制按鈕（無秒數顯示） -->
+        <header class="bg-gradient-to-r from-indigo-700 via-indigo-600 to-blue-600 text-white shadow-lg sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 py-2.5 sm:px-6 flex flex-wrap justify-between items-center gap-3">
+                <div class="flex items-center space-x-3">
+                    <div class="p-1.5 bg-white/10 rounded-xl backdrop-blur-md">
+                        <i class="fa-solid fa-award text-amber-300 text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h1 class="text-lg font-bold tracking-wide">課堂獎勵加減分系統</h1>
+                            <span class="text-[11px] px-2.5 py-0.5 rounded-full font-bold shadow-inner"
+                                :class="isRunning ? 'bg-emerald-500 text-white' : (isPaused ? 'bg-amber-400 text-slate-900' : (isFinished ? 'bg-slate-500 text-white' : 'bg-white/20 text-indigo-100'))">
+                                {{ isRunning ? '計時進行中' : (isPaused ? '已暫停' : (isFinished ? '已結束' : '未開始')) }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 頂部控制按鈕群 -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <button @click="startTimer" :disabled="isRunning || isFinished" 
+                        class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 text-white font-bold rounded-lg shadow-sm transition text-xs sm:text-sm flex items-center space-x-1.5">
+                        <i class="fa-solid fa-play text-xs"></i>
+                        <span>{{ isPaused ? '繼續計分' : '開始獎勵計分' }}</span>
+                    </button>
+
+                    <button @click="pauseTimer" :disabled="!isRunning" 
+                        class="px-3 py-1.5 bg-amber-400 hover:bg-amber-500 text-slate-900 disabled:opacity-40 font-bold rounded-lg shadow-sm transition text-xs sm:text-sm flex items-center space-x-1.5">
+                        <i class="fa-solid fa-pause text-xs"></i>
+                        <span>暫停</span>
+                    </button>
+
+                    <button @click="stopTimer(false)" :disabled="isFinished || totalSeconds === 0" 
+                        class="px-3 py-1.5 bg-rose-500 hover:bg-rose-600 disabled:opacity-40 text-white font-bold rounded-lg shadow-sm transition text-xs sm:text-sm flex items-center space-x-1.5">
+                        <i class="fa-solid fa-square text-xs"></i>
+                        <span>停止與結算</span>
+                    </button>
+
+                    <button @click="resetAll" 
+                        class="px-2.5 py-1.5 bg-white/15 hover:bg-white/25 text-white font-bold rounded-lg transition text-xs sm:text-sm flex items-center space-x-1">
+                        <i class="fa-solid fa-rotate-left text-xs"></i>
+                        <span>重置</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主要內容區域 -->
+        <main class="max-w-7xl mx-auto px-4 py-5 sm:px-6 flex-grow w-full space-y-5">
+
+            <!-- 規則提示條 -->
+            <div class="bg-amber-50/90 border border-amber-200/80 rounded-xl p-3 flex items-start space-x-3 text-xs text-amber-900 shadow-sm">
+                <i class="fa-solid fa-circle-info text-amber-500 text-base mt-0.5"></i>
+                <div class="leading-relaxed">
+                    <strong class="font-bold">計分與扣分消除規則說明：</strong>
+                    系統於背景運行（上限 35 分鐘）。每 5 分鐘全班無扣分的學生自動獎勵 +1 分。若學生被手動扣分（點擊 <i class="fa-solid fa-minus text-rose-500"></i>），將啟動 <span class="text-amber-700 font-bold">個人專屬 5 分鐘消除倒數</span>。倒數期間若未再被扣分，倒數歸零時自動消除 1 點扣分 (分數 +1)；若倒數期間再次被扣分，消除倒數將重置回 5 分鐘重新計算。按 ＋ 時若該生仍有待消除扣分，會先抵銷 1 點扣分（可用於更正誤按）。
+                </div>
+            </div>
+
+            <!-- 學生名單匯入區 -->
+            <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex flex-wrap items-center gap-2 text-xs">
+                <i class="fa-solid fa-users text-indigo-600"></i>
+                <span class="font-bold text-slate-700">學生名單</span>
+                <span class="text-slate-500">{{ rosterInfo }}</span>
+                <div class="ml-auto flex flex-wrap items-center gap-2">
+                    <input id="rosterFile" type="file" accept=".xlsx,.xls,.csv" class="hidden" @change="onRosterFile">
+                    <button @click="chooseRosterFile" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-file-import"></i><span>匯入名單 (Excel)</span>
+                    </button>
+                    <button @click="downloadTemplate" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition">下載範本</button>
+                    <button v-if="rosterImported" @click="clearRoster" class="px-3 py-1.5 bg-slate-100 hover:bg-rose-100 text-rose-600 font-bold rounded-lg transition">清除名單</button>
+                </div>
+                <div class="w-full text-slate-400">匯入為選用功能：第一欄「座號」、第二欄「姓名」（可有標題列）。不匯入也能直接以預設 1 ~ 30 號使用。</div>
+            </div>
+
+            <!-- 全班卡片展示區 -->
+            <div>
+                <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-chalkboard-user text-indigo-600 mr-2"></i>全班學生即時狀態看板 (共 {{ students.length }} 人)
+                    </h2>
+                    <div class="flex items-center space-x-2 text-xs text-slate-500">
+                        <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1"></span>正常獎勵中</span>
+                        <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 mr-1"></span>扣分消除中</span>
+                    </div>
+                </div>
+
+                <!-- 學生 Grid 卡片區 (座號顯眼放大呈現) -->
+                <div v-if="students.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5">
+                    <div v-for="student in students" :key="student.seatNo"
+                        class="bg-white rounded-xl border p-3.5 shadow-sm hover:shadow-md transition flex flex-col justify-between relative overflow-hidden"
+                        :class="{
+                            'border-amber-400 bg-amber-50/30': student.penaltyPoints > 0,
+                            'border-slate-200': student.penaltyPoints === 0
+                        }">
+                        
+                        <!-- 頂部：放大座號與狀態 Badge -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="bg-indigo-600 text-white font-black px-3 py-1 rounded-xl text-lg sm:text-xl shadow-sm tracking-wide">
+                                    {{ student.seatNo }} 號
+                                </span>
+                                <!-- 狀態 Badge：顯示倒數 MM:SS -->
+                                <span v-if="student.penaltyPoints > 0" class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center space-x-1 border border-amber-300">
+                                    <i class="fa-solid fa-clock-rotate-left text-amber-600 animate-spin" style="animation-duration: 4s;"></i>
+                                    <span>消除中 {{ formatTime(student.penaltyCountdown) }}</span>
+                                </span>
+                                <span v-else class="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                    正常獎勵
+                                </span>
+                            </div>
+
+                            <div class="text-center py-2">
+                                <!-- 姓名（有匯入時置中顯示） -->
+                                <div v-if="student.name" class="text-xl sm:text-2xl font-bold text-slate-800 truncate px-1" :title="student.name">{{ student.name }}</div>
+                                <!-- 分數大字體 -->
+                                <div class="text-4xl font-extrabold my-1 font-mono tracking-tight"
+                                    :class="{
+                                        'text-emerald-600': student.score > 0,
+                                        'text-slate-400': student.score === 0,
+                                        'text-rose-600': student.score < 0
+                                    }">
+                                    {{ student.score > 0 ? '+' + student.score : student.score }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 簡單放大的加減分按鈕 -->
+                        <div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-100">
+                            <button @click="penaltyStudent(student)" 
+                                class="py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-black rounded-lg text-xl transition active:scale-95 flex items-center justify-center"
+                                title="手動減 1 分">
+                                <i class="fa-solid fa-minus"></i>
+                            </button>
+                            <button @click="bonusStudent(student)" 
+                                class="py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-black rounded-lg text-xl transition active:scale-95 flex items-center justify-center"
+                                title="手動加 1 分">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 即時動態日誌 (Log Stream) -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-sm font-bold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-list-check text-indigo-600 mr-2"></i>課堂即時異動紀錄 Log
+                    </h3>
+                    <button @click="logs = []" class="text-xs text-slate-400 hover:text-slate-600">清空紀錄</button>
+                </div>
+                <div class="bg-slate-900 text-slate-200 rounded-xl p-3.5 h-36 overflow-y-auto font-mono text-xs space-y-1.5">
+                    <div v-if="logs.length === 0" class="text-slate-500 italic text-center py-8">尚無任何異動紀錄</div>
+                    <div v-for="(log, idx) in logs" :key="idx" class="flex items-start space-x-2">
+                        <span class="text-slate-500 shrink-0">[{{ log.time }}]</span>
+                        <span :class="{
+                            'text-emerald-400': log.type === 'success',
+                            'text-rose-400': log.type === 'danger',
+                            'text-amber-400': log.type === 'warning',
+                            'text-indigo-300': log.type === 'info'
+                        }">{{ log.text }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 課堂結算面板 (規則 5 & 6) -->
+            <div v-if="isFinished" id="settlement-section" class="bg-white rounded-2xl p-6 shadow-xl border-2 border-indigo-500 space-y-6">
+                <div class="text-center pb-4 border-b border-slate-200">
+                    <span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Lesson Summary</span>
+                    <h2 class="text-2xl font-extrabold text-slate-800 mt-2">課堂獎勵計分最終結算報告</h2>
+                    <p class="text-xs text-slate-500 mt-1">累積執行計時 {{ formatTime(totalSeconds) }}</p>
+                </div>
+
+                <!-- 評語區塊 (規則 6) -->
+                <div class="rounded-2xl p-6 text-center space-y-3 shadow-inner"
+                    :class="negativeStudents.length === 0 ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white' : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white'">
+                    
+                    <!-- 全班正分狀況 -->
+                    <template v-if="negativeStudents.length === 0">
+                        <div class="inline-block p-3 bg-white/20 rounded-full mb-1">
+                            <i class="fa-solid fa-trophy text-amber-300 text-4xl animate-bounce"></i>
+                        </div>
+                        <h3 class="text-xl font-black">🎉 太棒了！全班表現極佳！</h3>
+                        <p class="text-sm sm:text-base font-medium max-w-2xl mx-auto leading-relaxed">
+                            全班同學今天課堂表現都非常認真、專心致志，值得高度表揚！大家繼續保持！
+                        </p>
+                    </template>
+
+                    <!-- 有學生負分狀況 (嚴格保護隱私：僅列座號，絕不出現名字) -->
+                    <template v-else>
+                        <div class="inline-block p-3 bg-white/20 rounded-full mb-1">
+                            <i class="fa-solid fa-heart-circle-bolt text-yellow-200 text-4xl"></i>
+                        </div>
+                        <h3 class="text-xl font-black">💪 課堂專心再加油提醒</h3>
+                        
+                        <!-- 隱私座號提示區 -->
+                        <div class="bg-white/20 backdrop-blur-md rounded-xl p-3 max-w-xl mx-auto border border-white/30 my-2">
+                            <p class="text-sm font-bold tracking-wide">
+                                📢 本次需要再加油的同學座號為：
+                                <span class="text-amber-200 text-lg font-black underline ml-1">
+                                    【 {{ negativeStudents.map(s => s.seatNo + '號').join(', ') }} 】
+                                </span>
+                            </p>
+                        </div>
+
+                        <p class="text-sm sm:text-base font-medium max-w-2xl mx-auto leading-relaxed text-amber-100">
+                            上述座號的同學，老師相信你們下次一定能做得更好！課堂記得要更加專心聽講、遵守秩序喔，加油！
+                        </p>
+                    </template>
+                </div>
+
+                <!-- 全班成績表格 + 匯出 Excel 按鈕 (規則 5) -->
+                <div>
+                    <div class="flex flex-wrap justify-between items-center mb-3 gap-2">
+                        <h3 class="font-bold text-slate-800 text-base flex items-center">
+                            <i class="fa-solid fa-table-list text-indigo-600 mr-2"></i>全班成績明細清單
+                        </h3>
+                        <button @click="exportToExcel" 
+                            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow transition text-xs sm:text-sm flex items-center space-x-2">
+                            <i class="fa-solid fa-file-excel text-base"></i>
+                            <span>匯出 Excel 成績單</span>
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 border-b border-slate-200">
+                                    <th class="py-3 px-4 font-bold">座號</th>
+                                    <th v-if="hasNames" class="py-3 px-4 font-bold">姓名</th>
+                                    <th class="py-3 px-4 font-bold">最終得分</th>
+                                    <th class="py-3 px-4 font-bold">表現狀態評估</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr v-for="student in students" :key="student.seatNo" class="hover:bg-slate-50/80 transition">
+                                    <td class="py-2.5 px-4 font-bold text-slate-700">{{ student.seatNo }} 號</td>
+                                    <td v-if="hasNames" class="py-2.5 px-4 text-slate-700">{{ student.name }}</td>
+                                    <td class="py-2.5 px-4 font-black font-mono text-base"
+                                        :class="student.score > 0 ? 'text-emerald-600' : (student.score === 0 ? 'text-slate-400' : 'text-rose-600')">
+                                        {{ student.score > 0 ? '+' + student.score : student.score }}
+                                    </td>
+                                    <td class="py-2.5 px-4 text-xs">
+                                        <span v-if="student.score > 0" class="inline-flex items-center text-emerald-700 font-semibold">
+                                            <i class="fa-solid fa-circle-check mr-1 text-emerald-500"></i>表現良好 (正分)
+                                        </span>
+                                        <span v-else-if="student.score === 0" class="inline-flex items-center text-slate-500 font-semibold">
+                                            <i class="fa-solid fa-minus mr-1 text-slate-400"></i>持平 (0分)
+                                        </span>
+                                        <span v-else class="inline-flex items-center text-rose-600 font-bold">
+                                            <i class="fa-solid fa-triangle-exclamation mr-1 text-rose-500"></i>需再專心加油 (負分)
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- 頁腳 -->
+        <footer class="bg-slate-100 border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+            課堂獎勵加減分系統 ‧ 每5分鐘自動結算與消除扣分機制 ‧ 適用各級學校課堂教學
+        </footer>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
+
+        createApp({
+            setup() {
+                // 固定全班 30 位學生
+                const students = ref([]);
+                
+                // 計時器狀態
+                const isRunning = ref(false);
+                const isPaused = ref(false);
+                const isFinished = ref(false);
+
+                // 時間相關單位（秒）
+                const totalSeconds = ref(0); // 累計總時間，最高 2100 秒 (35 分鐘)
+                const maxTotalSeconds = 2100; // 35 * 60
+                const cycleDuration = 300;   // 5分鐘 = 300秒
+
+                let timerId = null;
+
+                // Log 紀錄
+                const logs = ref([]);
+
+                // 初始化全班 30 位學生（純座號）
+                const initStudents = () => {
+                    const list = [];
+                    for (let i = 1; i <= 30; i++) {
+                        list.push({
+                            seatNo: i,
+                            name: '',
+                            score: 0,
+                            penaltyPoints: 0,
+                            penaltyCountdown: 0 // 個人 5 分鐘消除倒數秒數
+                        });
+                    }
+                    students.value = list;
+                };
+
+                // 負分學生清單
+                const negativeStudents = computed(() => {
+                    return students.value.filter(s => s.score < 0);
+                });
+
+                // 格式化時間 (MM:SS)
+                const formatTime = (secs) => {
+                    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+                    const s = (secs % 60).toString().padStart(2, '0');
+                    return `${m}:${s}`;
+                };
+
+                // 新增 Log
+                const addLog = (text, type = 'info') => {
+                    const now = new Date();
+                    const timeStr = now.toTimeString().split(' ')[0];
+                    logs.value.unshift({ time: timeStr, text, type });
+                    if (logs.value.length > 300) logs.value.pop();
+                };
+
+                // --- 共用輔助 ---
+                const hasNames = computed(() => students.value.some(s => s.name));
+                const rosterInfo = ref('尚未匯入，使用預設 1 ~ 30 號');
+                const rosterImported = ref(false);
+                const label = (s) => `${s.seatNo}號${s.name ? ' ' + s.name : ''}`;
+                const stopInterval = () => { if (timerId) { clearInterval(timerId); timerId = null; } };
+                const hasProgress = () => totalSeconds.value > 0 || students.value.some(s => s.score !== 0 || s.penaltyPoints > 0);
+                const resetState = () => {
+                    stopInterval();
+                    isRunning.value = false;
+                    isPaused.value = false;
+                    isFinished.value = false;
+                    totalSeconds.value = 0;
+                };
+
+                // --- 手動減分與加分邏輯 ---
+                const penaltyStudent = (student) => {
+                    student.score -= 1;
+                    student.penaltyPoints += 1;
+                    student.penaltyCountdown = 300;
+                    addLog(`[${label(student)}] 手動減 1 分 (當前分數: ${student.score}, 待消除扣分: ${student.penaltyPoints}, 5分鐘消除倒數重新開始)`, 'danger');
+                };
+
+                const bonusStudent = (student) => {
+                    student.score += 1;
+                    if (student.penaltyPoints > 0) {
+                        student.penaltyPoints -= 1;
+                        if (student.penaltyPoints === 0) student.penaltyCountdown = 0;
+                        addLog(`[${label(student)}] 手動加 1 分，並抵銷 1 點待消除扣分 (當前分數: ${student.score}, 待消除扣分: ${student.penaltyPoints})`, 'success');
+                    } else {
+                        addLog(`[${label(student)}] 手動額外加 1 分 (當前分數: ${student.score})`, 'success');
+                    }
+                };
+
+                // --- 計時器核心：以實際時間差補算秒數，避免分頁背景節流造成誤差 ---
+                let lastTick = 0;
+
+                const tickOneSecond = () => {
+                    totalSeconds.value += 1;
+
+                    // 1. 全班每 5 分鐘獎勵（先判斷，僅無扣分學生 +1）
+                    if (totalSeconds.value % cycleDuration === 0) {
+                        let rewardCount = 0;
+                        students.value.forEach(s => {
+                            if (s.penaltyPoints === 0) {
+                                s.score += 1;
+                                rewardCount++;
+                            }
+                        });
+                        addLog(`⚡ 全班 5 分鐘課堂週期到！共 ${rewardCount} 位無扣分學生獲得獎勵 +1 分。`, 'success');
+                    }
+
+                    // 2. 各學生個人消除倒數
+                    students.value.forEach(s => {
+                        if (s.penaltyPoints > 0) {
+                            s.penaltyCountdown -= 1;
+                            if (s.penaltyCountdown <= 0) {
+                                s.penaltyPoints -= 1;
+                                s.score += 1;
+                                addLog(`⏱️ [${label(s)}] 滿 5 分鐘未再被扣分，自動消除 1 點扣分 (分數 +1, 剩餘待消除: ${s.penaltyPoints})`, 'warning');
+                                s.penaltyCountdown = s.penaltyPoints > 0 ? 300 : 0;
+                            }
+                        }
+                    });
+
+                    return totalSeconds.value >= maxTotalSeconds;
+                };
+
+                const startTimer = () => {
+                    if (students.value.length === 0 || isFinished.value || isRunning.value) return;
+                    isRunning.value = true;
+                    isPaused.value = false;
+                    addLog('開始獎勵計分計時器...', 'success');
+                    lastTick = Date.now();
+                    timerId = setInterval(() => {
+                        const steps = Math.floor((Date.now() - lastTick) / 1000);
+                        if (steps <= 0) return;
+                        lastTick += steps * 1000;
+                        for (let i = 0; i < steps; i++) {
+                            if (tickOneSecond()) {
+                                stopTimer(true);
+                                break;
+                            }
+                        }
+                    }, 250);
+                };
+
+                const pauseTimer = () => {
+                    if (!isRunning.value) return;
+                    stopInterval();
+                    isRunning.value = false;
+                    isPaused.value = true;
+                    addLog('計時器已暫停。', 'warning');
+                };
+
+                const stopTimer = (autoStopped = false) => {
+                    if (isFinished.value) return;
+                    stopInterval();
+                    isRunning.value = false;
+                    isPaused.value = false;
+                    isFinished.value = true;
+                    addLog(autoStopped ? '⏱️ 已達到 35 分鐘上限，系統自動停止計分並開啟結算報告。' : '手動停止計分，開啟結算報告。', 'warning');
+
+                    setTimeout(() => {
+                        const el = document.getElementById('settlement-section');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        if (negativeStudents.value.length === 0 && typeof confetti === 'function') {
+                            confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+                        }
+                    }, 200);
+                };
+
+                const resetAll = () => {
+                    resetState();
+                    students.value.forEach(s => {
+                        s.score = 0;
+                        s.penaltyPoints = 0;
+                        s.penaltyCountdown = 0;
+                    });
+                    logs.value = [];
+                    addLog('系統已重置回初始狀態。', 'info');
+                };
+
+                // --- 匯出 Excel 成績單（有名單時多一欄姓名） ---
+                const exportToExcel = () => {
+                    if (typeof XLSX === 'undefined') {
+                        addLog('Excel 匯出元件載入失敗，請檢查網路連線。', 'danger');
+                        return;
+                    }
+                    const exportData = students.value.map(s => {
+                        const row = { '座號': `${s.seatNo} 號` };
+                        if (hasNames.value) row['姓名'] = s.name;
+                        row['最終得分'] = s.score;
+                        row['表現狀態評估'] = s.score > 0 ? '表現良好 (正分)' : (s.score === 0 ? '持平 (0分)' : '需再專心加油 (負分)');
+                        return row;
+                    });
+                    const worksheet = XLSX.utils.json_to_sheet(exportData);
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "課堂獎勵成績單");
+                    const dateStr = new Date().toISOString().slice(0, 10);
+                    XLSX.writeFile(workbook, `課堂獎勵成績單_${dateStr}.xlsx`);
+                    addLog('成功匯出 Excel 成績單。', 'success');
+                };
+
+                // --- 匯入名單（座號 + 姓名，選用） ---
+                const parseRoster = (rows) => {
+                    rows = rows.filter(r => r.some(c => String(c).trim() !== ''));
+                    if (!rows.length) return { list: [], skipped: 0 };
+                    const head = rows[0].map(c => String(c).trim());
+                    let si = head.findIndex(h => /座號|座位|號碼|^seat|^no\.?$|^#$/i.test(h));
+                    let ni = head.findIndex(h => /姓名|名字|名稱|^name/i.test(h));
+                    const hasHeader = si >= 0 || ni >= 0;
+                    if (si < 0) si = ni === 0 ? 1 : 0;
+                    if (ni < 0) ni = si === 0 ? 1 : 0;
+                    const seen = new Set();
+                    const list = [];
+                    let skipped = 0;
+                    rows.slice(hasHeader ? 1 : 0).forEach(r => {
+                        const seat = parseInt(String(r[si] ?? '').replace(/[^\d]/g, ''), 10);
+                        const name = String(r[ni] ?? '').trim();
+                        if (!Number.isInteger(seat) || seat <= 0 || seen.has(seat)) { skipped++; return; }
+                        seen.add(seat);
+                        list.push({ seatNo: seat, name, score: 0, penaltyPoints: 0, penaltyCountdown: 0 });
+                    });
+                    list.sort((a, b) => a.seatNo - b.seatNo);
+                    return { list, skipped };
+                };
+
+                const chooseRosterFile = () => {
+                    const el = document.getElementById('rosterFile');
+                    if (el) el.click();
+                };
+
+                const onRosterFile = (e) => {
+                    const file = e.target.files && e.target.files[0];
+                    e.target.value = '';
+                    if (!file) return;
+                    if (typeof XLSX === 'undefined') {
+                        addLog('Excel 元件載入失敗，無法匯入，請檢查網路連線。', 'danger');
+                        return;
+                    }
+                    const isCsv = /\.csv$/i.test(file.name);
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        try {
+                            const wb = isCsv
+                                ? XLSX.read(ev.target.result, { type: 'string' })
+                                : XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+                            const ws = wb.Sheets[wb.SheetNames[0]];
+                            const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+                            const { list, skipped } = parseRoster(rows);
+                            if (!list.length) {
+                                addLog('匯入失敗：找不到有效的「座號」資料，請確認第一欄為座號、第二欄為姓名。', 'danger');
+                                return;
+                            }
+                            if (hasProgress() && !confirm('匯入新名單會重置目前所有計分與計時，確定要繼續嗎？')) return;
+                            resetState();
+                            students.value = list;
+                            rosterImported.value = true;
+                            rosterInfo.value = `已匯入「${file.name}」共 ${list.length} 人`;
+                            addLog(`已匯入名單：${list.length} 人${skipped ? `（略過 ${skipped} 列無效或重複座號）` : ''}。`, 'success');
+                        } catch (err) {
+                            addLog('匯入失敗：檔案無法讀取，請確認是 .xlsx / .xls / .csv 檔。', 'danger');
+                        }
+                    };
+                    if (isCsv) reader.readAsText(file, 'UTF-8'); else reader.readAsArrayBuffer(file);
+                };
+
+                const downloadTemplate = () => {
+                    if (typeof XLSX === 'undefined') return;
+                    const ws = XLSX.utils.aoa_to_sheet([['座號', '姓名'], [1, '王小明'], [2, '李小華'], [3, '陳小美']]);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, '名單');
+                    XLSX.writeFile(wb, '學生名單範本.xlsx');
+                };
+
+                const clearRoster = () => {
+                    if (hasProgress() && !confirm('清除名單會重置目前所有計分與計時，確定要繼續嗎？')) return;
+                    resetState();
+                    initStudents();
+                    rosterImported.value = false;
+                    rosterInfo.value = '尚未匯入，使用預設 1 ~ 30 號';
+                    addLog('已清除名單，回復預設 1 ~ 30 號。', 'info');
+                };
+
+                onMounted(() => {
+                    initStudents();
+                    addLog('已初始化預設 30 位學生（僅座號），可選擇匯入名單。', 'info');
+                });
+
+                onUnmounted(() => {
+                    stopInterval();
+                });
+
+                return {
+                    students, isRunning, isPaused, isFinished, totalSeconds,
+                    maxTotalSeconds, cycleDuration, negativeStudents, logs,
+                    hasNames, rosterInfo, rosterImported,
+                    formatTime, startTimer, pauseTimer, stopTimer, resetAll,
+                    penaltyStudent, bonusStudent, exportToExcel,
+                    chooseRosterFile, onRosterFile, downloadTemplate, clearRoster
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
