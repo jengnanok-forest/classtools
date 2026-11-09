@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>互動式心智圖語詞卡排版系統</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -63,7 +63,6 @@
         }
         .drop-target-active {
             animation: pulse-border 1.2s infinite ease-in-out !important;
-            transform: scale(1.06) !important;
         }
 
         /* Disable user text selection during drag operations */
@@ -81,41 +80,52 @@
             animation: pulse-reparent 1.2s infinite ease-in-out !important;
             cursor: pointer !important;
         }
+
+        html, body { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
+        input, textarea { -webkit-user-select: text; user-select: text; }
+        #canvas-container { touch-action: none; }
+        #canvas-viewport { transform-origin: 0 0; }
+        .mm-node { touch-action: none; -webkit-touch-callout: none; transition: box-shadow .2s ease !important; }
+        .mm-node.selected { z-index: 40; }
+        .mm-node:hover { z-index: 35; }
+        .node-actions { display: none; }
+        .mm-node.selected .node-actions { display: block; }
+        @media (hover: hover) { .mm-node:hover .node-actions { display: block; } }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans h-screen w-screen overflow-hidden flex flex-col no-select">
+<body class="bg-slate-100 text-slate-800 font-sans h-screen w-screen overflow-hidden flex flex-col no-select" style="height:100vh;height:100dvh">
 
     <!-- 頂部導航與功能列 Navigation Header -->
-    <header class="h-16 bg-white border-b border-slate-200 px-4 flex items-center justify-between shadow-sm z-30 shrink-0">
+    <header class="min-h-16 flex-wrap gap-y-2 py-2 bg-white border-b border-slate-200 px-4 flex items-center justify-between shadow-sm z-30 shrink-0">
         <!-- Logo & Title -->
         <div class="flex items-center space-x-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-200">
-                <i class="fa-solid fa-sitemap text-lg"></i>
+                <i class="fa-solid fa-sitemap text-2xl"></i>
             </div>
             <div>
-                <h1 class="font-bold text-slate-800 text-lg leading-tight flex items-center gap-2">
+                <h1 class="font-bold text-slate-800 text-2xl leading-tight flex items-center gap-2">
                     心智圖語詞卡工具
-                    <span class="text-xs font-semibold px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-200">v2.5</span>
+                    
                 </h1>
-                <p class="text-xs text-slate-400">強大拖動對齊與自動階層排版</p>
+                
             </div>
         </div>
 
         <!-- Central Action Group -->
-        <div class="hidden md:flex items-center bg-slate-100 p-1.5 rounded-xl border border-slate-200 space-x-1">
-            <button id="btn-edit-root" class="px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white hover:shadow-xs rounded-lg transition-all flex items-center gap-1.5">
+        <div class="flex items-center bg-slate-100 p-1.5 rounded-xl border border-slate-200 space-x-1">
+            <button id="btn-edit-root" class="px-4 py-2.5 text-base font-medium text-slate-700 hover:bg-white hover:shadow-xs rounded-lg transition-all flex items-center gap-1.5">
                 <i class="fa-solid fa-pen-to-square text-indigo-500"></i> 設定中心主題
             </button>
             <div class="h-4 w-px bg-slate-300"></div>
-            <button id="btn-open-import" class="px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white hover:shadow-xs rounded-lg transition-all flex items-center gap-1.5">
+            <button id="btn-open-import" class="px-4 py-2.5 text-base font-medium text-slate-700 hover:bg-white hover:shadow-xs rounded-lg transition-all flex items-center gap-1.5">
                 <i class="fa-solid fa-file-import text-indigo-500"></i> 匯入 / 輸入語詞
             </button>
             <div class="h-4 w-px bg-slate-300"></div>
-            <button id="btn-auto-layout" class="px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white hover:shadow-xs rounded-lg transition-all flex items-center gap-1.5">
+            <button id="btn-auto-layout" class="px-4 py-2.5 text-base font-medium text-slate-700 hover:bg-white hover:shadow-xs rounded-lg transition-all flex items-center gap-1.5">
                 <i class="fa-solid fa-diagram-project text-emerald-500"></i> 自動排版
             </button>
             <div class="h-4 w-px bg-slate-300"></div>
-            <button id="btn-reset-map" class="px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-all flex items-center gap-1.5">
+            <button id="btn-reset-map" class="px-4 py-2.5 text-base font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-all flex items-center gap-1.5">
                 <i class="fa-solid fa-rotate-left"></i> 清空畫布
             </button>
         </div>
@@ -123,28 +133,28 @@
         <!-- Right Tool Buttons -->
         <div class="flex items-center space-x-2">
             <!-- Viewport reset -->
-            <button id="btn-center-view" title="重置畫面檢視" class="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all">
+            <button id="btn-center-view" title="重置畫面檢視" class="w-12 h-12 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all">
                 <i class="fa-solid fa-crosshairs"></i>
             </button>
 
             <!-- Export Dropdown -->
             <div class="relative inline-block text-left">
-                <button id="btn-export-dropdown" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl shadow-md shadow-indigo-200 transition-all flex items-center gap-2">
+                <button id="btn-export-dropdown" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-base rounded-xl shadow-md shadow-indigo-200 transition-all flex items-center gap-2">
                     <i class="fa-solid fa-download"></i> 匯出圖檔
-                    <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                    <i class="fa-solid fa-chevron-down text-sm"></i>
                 </button>
                 <div id="export-menu" class="hidden absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50">
-                    <button id="btn-export-png" class="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2">
-                        <i class="fa-regular fa-image text-base"></i> 匯出為 PNG 圖檔
+                    <button id="btn-export-png" class="w-full text-left px-4 py-2.5 text-base text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2">
+                        <i class="fa-regular fa-image text-xl"></i> 匯出為 PNG 圖檔
                     </button>
-                    <button id="btn-export-svg" class="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2">
-                        <i class="fa-solid fa-vector-square text-base"></i> 匯出為 SVG 向量圖
+                    <button id="btn-export-svg" class="w-full text-left px-4 py-2.5 text-base text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2">
+                        <i class="fa-solid fa-vector-square text-xl"></i> 匯出為 SVG 向量圖
                     </button>
                 </div>
             </div>
 
-            <button id="btn-open-help" class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:text-slate-800 transition-all">
-                <i class="fa-solid fa-circle-question text-base"></i>
+            <button id="btn-open-help" class="w-12 h-12 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:text-slate-800 transition-all">
+                <i class="fa-solid fa-circle-question text-xl"></i>
             </button>
         </div>
     </header>
@@ -153,14 +163,14 @@
     <div class="flex-1 relative flex overflow-hidden">
 
         <!-- 左側語詞庫 Side Drawer (Left Word Bank) -->
-        <aside id="left-sidebar" class="w-72 bg-white border-r border-slate-200 flex flex-col z-20 shadow-lg transition-all duration-300 relative">
+        <aside id="left-sidebar" class="w-80 bg-white border-r border-slate-200 flex flex-col z-20 shadow-lg transition-all duration-300 relative">
             <div class="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <div class="flex items-center gap-2">
                     <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
-                    <h2 class="font-bold text-xs text-slate-700 uppercase tracking-wider">待使用語詞庫</h2>
-                    <span id="word-count-badge" class="px-2 py-0.5 bg-slate-200 text-slate-600 rounded-full text-[11px] font-semibold">0</span>
+                    <h2 class="font-bold text-base text-slate-700 uppercase tracking-wider">待使用語詞庫</h2>
+                    <span id="word-count-badge" class="px-2 py-0.5 bg-slate-200 text-slate-600 rounded-full text-sm font-semibold">0</span>
                 </div>
-                <button id="btn-quick-add" title="快速新增單字" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1">
+                <button id="btn-quick-add" title="快速新增單字" class="text-base text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1">
                     <i class="fa-solid fa-plus"></i> 新增
                 </button>
             </div>
@@ -168,12 +178,12 @@
             <!-- 快速直接輸入與新增列 -->
             <div class="p-3 border-b border-slate-100 space-y-2">
                 <div class="flex items-center gap-1.5">
-                    <input type="text" id="direct-word-input" placeholder="輸入語詞按 Enter 新增..." class="flex-1 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
-                    <button id="btn-direct-add-word" title="新增至語詞庫" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-lg transition-all shrink-0 flex items-center justify-center">
+                    <input type="text" id="direct-word-input" placeholder="輸入語詞按 Enter 新增..." class="flex-1 px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                    <button id="btn-direct-add-word" title="新增至語詞庫" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-base rounded-lg transition-all shrink-0 flex items-center justify-center">
                         <i class="fa-solid fa-plus"></i>
                     </button>
                 </div>
-                <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                <div class="flex items-center justify-between text-sm text-slate-400 pt-1">
                     <span>提示：拖拽或點擊加至畫布</span>
                     <button id="btn-batch-add-all" class="text-indigo-600 hover:underline">全選投入</button>
                 </div>
@@ -184,8 +194,8 @@
                 <!-- 空狀態 Prompt -->
                 <div id="empty-word-bank" class="py-12 text-center text-slate-400 hidden">
                     <i class="fa-solid fa-box-open text-3xl mb-2 text-slate-300"></i>
-                    <p class="text-xs">語詞庫目前為空</p>
-                    <button id="empty-import-trigger" class="mt-3 text-xs text-indigo-600 underline font-medium">點擊匯入新語詞</button>
+                    <p class="text-base">語詞庫目前為空</p>
+                    <button id="empty-import-trigger" class="mt-3 text-base text-indigo-600 underline font-medium">點擊匯入新語詞</button>
                 </div>
                 <!-- 語詞卡片列表區 -->
                 <div id="word-cards-list" class="grid grid-cols-1 gap-2 align-content-start"></div>
@@ -193,24 +203,24 @@
         </aside>
 
         <!-- Toggle Left Drawer Button -->
-        <button id="btn-toggle-left-bar" class="absolute left-72 top-4 z-30 bg-white border border-slate-200 w-6 h-12 rounded-r-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 shadow-md transition-all">
-            <i class="fa-solid fa-chevron-left text-xs" id="left-toggle-icon"></i>
+        <button id="btn-toggle-left-bar" class="absolute left-80 top-4 z-30 bg-white border border-slate-200 w-6 h-12 rounded-r-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 shadow-md transition-all">
+            <i class="fa-solid fa-chevron-left text-base" id="left-toggle-icon"></i>
         </button>
 
         <!-- 中央無限互動畫布 Mind Map Interactive Canvas -->
         <main id="canvas-container" class="flex-1 relative overflow-hidden canvas-bg-grid cursor-grab active:cursor-grabbing">
             
             <!-- 階層變更模式頂部提示 Banner -->
-            <div id="reparent-banner" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-emerald-600 text-white text-xs px-5 py-2.5 rounded-full shadow-xl flex items-center gap-3 border border-emerald-400 animate-bounce">
-                <i class="fa-solid fa-diagram-next text-base"></i>
+            <div id="reparent-banner" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-emerald-600 text-white text-base px-5 py-2.5 rounded-full shadow-xl flex items-center gap-3 border border-emerald-400 animate-bounce">
+                <i class="fa-solid fa-diagram-next text-xl"></i>
                 <span>請點擊畫面上要連結的<strong>「目標父節點」</strong>，或點擊空白處移至中心主題</span>
-                <button id="btn-cancel-reparent" class="bg-emerald-800 hover:bg-emerald-900 text-white px-2.5 py-1 rounded-full text-[11px] transition-all font-semibold ml-2">
+                <button id="btn-cancel-reparent" class="bg-emerald-800 hover:bg-emerald-900 text-white px-2.5 py-1 rounded-full text-sm transition-all font-semibold ml-2">
                     取消
                 </button>
             </div>
 
             <!-- Transform Wrapper -->
-            <div id="canvas-viewport" class="absolute inset-0 origin-0 transform-gpu">
+            <div id="canvas-viewport" class="absolute inset-0 pointer-events-none transform-gpu">
                 <!-- SVG Connections Layer -->
                 <svg id="svg-layer" class="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
                     <defs>
@@ -231,21 +241,21 @@
 
             <!-- Canvas Floating Controls (Zoom & Quick Tools) -->
             <div class="absolute right-6 bottom-6 flex flex-col space-y-2 bg-white/90 backdrop-blur border border-slate-200 p-1.5 rounded-2xl shadow-xl z-20">
-                <button id="btn-zoom-in" title="放大 (+)" class="w-9 h-9 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-all">
+                <button id="btn-zoom-in" title="放大 (+)" class="w-12 h-12 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-all">
                     <i class="fa-solid fa-plus"></i>
                 </button>
-                <span id="zoom-indicator" class="text-[11px] font-semibold text-slate-500 text-center py-0.5">100%</span>
-                <button id="btn-zoom-out" title="縮小 (-)" class="w-9 h-9 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-all">
+                <span id="zoom-indicator" class="text-sm font-semibold text-slate-500 text-center py-0.5">100%</span>
+                <button id="btn-zoom-out" title="縮小 (-)" class="w-12 h-12 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-all">
                     <i class="fa-solid fa-minus"></i>
                 </button>
                 <div class="w-full h-px bg-slate-200 my-1"></div>
-                <button id="btn-re-center" title="重置視角" class="w-9 h-9 rounded-xl hover:bg-slate-100 flex items-center justify-center text-indigo-600 transition-all">
+                <button id="btn-re-center" title="重置視角" class="w-12 h-12 rounded-xl hover:bg-slate-100 flex items-center justify-center text-indigo-600 transition-all">
                     <i class="fa-solid fa-arrows-to-dot"></i>
                 </button>
             </div>
 
             <!-- Canvas Helper Overlay Badge -->
-            <div class="absolute left-6 bottom-6 pointer-events-none bg-white/80 backdrop-blur border border-slate-200/80 px-3 py-1.5 rounded-xl shadow-xs text-slate-500 text-xs flex items-center gap-2">
+            <div class="absolute left-6 bottom-6 pointer-events-none bg-white/80 backdrop-blur border border-slate-200/80 px-4 py-2.5 rounded-xl shadow-xs text-slate-500 text-base flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span class="hidden sm:inline">拖拽自由擺放語詞位置 • 點擊語詞卡上的 🔗 鈕手動變更階層連線</span>
             </div>
@@ -263,19 +273,19 @@
                     <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
                         <i class="fa-solid fa-file-circle-plus"></i>
                     </div>
-                    <h3 class="font-bold text-slate-800 text-base">匯入與批次建立語詞卡</h3>
+                    <h3 class="font-bold text-slate-800 text-xl">匯入與批次建立語詞卡</h3>
                 </div>
                 <button class="modal-close text-slate-400 hover:text-slate-600 transition-all w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center">
-                    <i class="fa-solid fa-xmark text-lg"></i>
+                    <i class="fa-solid fa-xmark text-2xl"></i>
                 </button>
             </div>
 
             <!-- Modal Tabs Nav -->
             <div class="flex border-b border-slate-200 bg-slate-50 px-6">
-                <button id="tab-btn-text" class="py-3 px-4 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2">
+                <button id="tab-btn-text" class="py-3 px-4 text-base font-bold border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2">
                     <i class="fa-solid fa-align-left"></i> 批量文字輸入
                 </button>
-                <button id="tab-btn-file" class="py-3 px-4 text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2 border-b-2 border-transparent">
+                <button id="tab-btn-file" class="py-3 px-4 text-base font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2 border-b-2 border-transparent">
                     <i class="fa-solid fa-file-excel"></i> 匯入 Excel / CSV 檔
                 </button>
             </div>
@@ -284,21 +294,21 @@
             <div class="p-6 overflow-y-auto space-y-4">
                 <!-- 設定中心主題名稱區塊 -->
                 <div class="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl space-y-1">
-                    <label for="import-root-topic" class="block text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                    <label for="import-root-topic" class="block text-base font-bold text-indigo-900 flex items-center gap-1.5">
                         <i class="fa-solid fa-bullseye text-indigo-600"></i> 設定中心主題名稱：
                     </label>
-                    <input type="text" id="import-root-topic" placeholder="例如：臺灣地理、極端氣候、英語常見動詞..." class="w-full px-3 py-1.5 bg-white border border-indigo-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
+                    <input type="text" id="import-root-topic" placeholder="例如：臺灣地理、極端氣候、英語常見動詞..." class="w-full px-4 py-2.5 bg-white border border-indigo-200 rounded-lg text-base focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
                 </div>
 
                 <!-- Tab 1: Text Batch Input -->
                 <div id="tab-content-text" class="space-y-3">
-                    <label class="block text-xs font-semibold text-slate-600">請貼上或輸入語詞（支援以換行、逗號 、 或分號分隔）：</label>
-                    <textarea id="import-text-input" rows="6" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none leading-relaxed" placeholder="例如：
+                    <label class="block text-base font-semibold text-slate-600">請貼上或輸入語詞（支援以換行、逗號 、 或分號分隔）：</label>
+                    <textarea id="import-text-input" rows="6" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-base focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none leading-relaxed" placeholder="例如：
 氣候變遷
 溫室效應, 碳排放; 太陽能
 極端天氣
 永續發展"></textarea>
-                    <div class="flex items-center justify-between text-xs text-slate-400">
+                    <div class="flex items-center justify-between text-base text-slate-400">
                         <span>預估將解析語詞數量：<strong id="preview-word-count" class="text-indigo-600">0</strong> 個</span>
                         <button id="btn-clear-input" class="text-slate-400 hover:text-slate-600">清空文字</button>
                     </div>
@@ -308,27 +318,27 @@
                 <div id="tab-content-file" class="hidden space-y-4">
                     <div id="drop-zone" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 bg-slate-50 hover:bg-indigo-50/30 rounded-2xl p-8 text-center transition-all cursor-pointer">
                         <i class="fa-solid fa-cloud-arrow-up text-4xl text-indigo-500 mb-3"></i>
-                        <p class="text-xs font-bold text-slate-700">點擊選擇檔案 或 將檔案拖拽至此處</p>
-                        <p class="text-[11px] text-slate-400 mt-1">支援 .xlsx, .xls, .csv 試算表格式</p>
+                        <p class="text-base font-bold text-slate-700">點擊選擇檔案 或 將檔案拖拽至此處</p>
+                        <p class="text-sm text-slate-400 mt-1">支援 .xlsx, .xls, .csv 試算表格式</p>
                         <input type="file" id="file-input" accept=".xlsx, .xls, .csv" class="hidden">
                     </div>
                     <div id="file-info" class="hidden bg-indigo-50 border border-indigo-200 p-3 rounded-xl flex items-center justify-between">
                         <div class="flex items-center gap-3">
                             <i class="fa-solid fa-file-csv text-xl text-indigo-600"></i>
                             <div>
-                                <p id="file-name" class="text-xs font-bold text-slate-800">filename.csv</p>
-                                <p id="file-size" class="text-[10px] text-slate-500">2.4 KB</p>
+                                <p id="file-name" class="text-base font-bold text-slate-800">filename.csv</p>
+                                <p id="file-size" class="text-sm text-slate-500">2.4 KB</p>
                             </div>
                         </div>
-                        <button id="btn-remove-file" class="text-slate-400 hover:text-rose-500 text-xs">刪除</button>
+                        <button id="btn-remove-file" class="text-slate-400 hover:text-rose-500 text-base">刪除</button>
                     </div>
                 </div>
             </div>
 
             <!-- Modal Footer -->
             <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end space-x-3">
-                <button class="modal-close px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-200 rounded-xl transition-all">取消</button>
-                <button id="btn-confirm-import" class="px-5 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md shadow-indigo-200 transition-all flex items-center gap-1.5">
+                <button class="modal-close px-4 py-2 text-base font-medium text-slate-600 hover:bg-slate-200 rounded-xl transition-all">取消</button>
+                <button id="btn-confirm-import" class="px-5 py-2 text-base font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md shadow-indigo-200 transition-all flex items-center gap-1.5">
                     <i class="fa-solid fa-check"></i> 確認加入語詞庫
                 </button>
             </div>
@@ -339,21 +349,21 @@
     <div id="modal-help" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col">
             <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                <h3 class="font-bold text-slate-800 text-xl flex items-center gap-2">
                     <i class="fa-solid fa-circle-question text-indigo-500"></i> 操作與快捷指南
                 </h3>
                 <button class="modal-close text-slate-400 hover:text-slate-600 transition-all w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div class="p-6 space-y-4 text-xs text-slate-600 leading-relaxed">
+            <div class="p-6 space-y-4 text-base text-slate-600 leading-relaxed">
                 <div class="flex items-start gap-3">
                     <div class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 font-bold">1</div>
                     <p><strong>抓取與組合階層：</strong>由左側「語詞庫」將卡片拖拽至中央畫布。若將卡片拖至「現有節點上」放開，將自動設定為該節點的子階段！</p>
                 </div>
                 <div class="flex items-start gap-3">
                     <div class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 font-bold">2</div>
-                    <p><strong>畫布平移與縮放：</strong>按住畫布空白處拖曳可平移視角；使用滑鼠滾輪可進行縮放。</p>
+                    <p><strong>畫布平移與縮放：</strong>iPad：單指拖曳空白處平移、雙指縮放；點一下語詞卡顯示工具列，連點兩下可編輯文字。電腦可用滑鼠滾輪縮放。</p>
                 </div>
                 <div class="flex items-start gap-3">
                     <div class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 font-bold">3</div>
@@ -370,11 +380,11 @@
     <!-- 4. Quick Add Single Word Prompt Floating Modal -->
     <div id="modal-quick-add" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-slate-100 p-5 space-y-4">
-            <h4 class="font-bold text-sm text-slate-800">新增單個語詞</h4>
-            <input type="text" id="quick-word-input" placeholder="請輸入語詞名稱..." class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
+            <h4 class="font-bold text-lg text-slate-800">新增單個語詞</h4>
+            <input type="text" id="quick-word-input" placeholder="請輸入語詞名稱..." class="w-full px-3 py-2 border border-slate-200 rounded-xl text-base focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
             <div class="flex justify-end space-x-2">
-                <button class="modal-close px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 rounded-lg">取消</button>
-                <button id="btn-save-quick-word" class="px-4 py-1.5 text-xs bg-indigo-600 text-white rounded-lg shadow-sm hover:bg-indigo-700">確定新增</button>
+                <button class="modal-close px-4 py-2.5 text-base text-slate-500 hover:bg-slate-100 rounded-lg">取消</button>
+                <button id="btn-save-quick-word" class="px-4 py-1.5 text-base bg-indigo-600 text-white rounded-lg shadow-sm hover:bg-indigo-700">確定新增</button>
             </div>
         </div>
     </div>
@@ -427,7 +437,7 @@
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             const bgClass = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-slate-800';
-            toast.className = `${bgClass} text-white text-xs px-4 py-2.5 rounded-xl shadow-lg transition-all duration-300 opacity-0 transform translate-y-2 flex items-center gap-2 pointer-events-auto`;
+            toast.className = `${bgClass} text-white text-base px-4 py-2.5 rounded-xl shadow-lg transition-all duration-300 opacity-0 transform translate-y-2 flex items-center gap-2 pointer-events-auto`;
             toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> <span>${message}</span>`;
             
             $('#toast-container').appendChild(toast);
@@ -460,10 +470,6 @@
             }];
             state.unassignedWords = [];
 
-            state.viewport.x = window.innerWidth / 2;
-            state.viewport.y = window.innerHeight / 2;
-            state.viewport.zoom = 1;
-
             renderWordBank();
             renderCanvas();
 
@@ -473,98 +479,182 @@
             setupUIControls();
 
             // Window Resize Update
-            window.addEventListener('resize', () => renderCanvas());
-        }
-
-        function setupCanvasPanAndZoom() {
-            const canvasContainer = $('#canvas-container');
-
-            // Pan on Mouse Down
-            canvasContainer.addEventListener('mousedown', (e) => {
-                if (state.reparentingNodeId) {
-                    // Clicked canvas background while in reparenting mode -> set as root child or cancel
-                    if (e.target === canvasContainer || e.target.id === 'svg-layer' || e.target.tagName === 'svg') {
-                        const rootNode = state.nodes.find(n => n.isRoot);
-                        if (rootNode) {
-                            setParentNode(state.reparentingNodeId, rootNode.id);
-                        }
-                        cancelReparenting();
-                    }
-                    return;
-                }
-
-                if (e.target === canvasContainer || e.target.id === 'svg-layer' || e.target.tagName === 'svg') {
-                    state.dragState.isPanning = true;
-                    state.dragState.startX = e.clientX - state.viewport.x;
-                    state.dragState.startY = e.clientY - state.viewport.y;
-                    canvasContainer.style.cursor = 'grabbing';
-                }
-            });
-
-            window.addEventListener('mousemove', (e) => {
-                if (state.dragState.isPanning) {
-                    state.viewport.x = e.clientX - state.dragState.startX;
-                    state.viewport.y = e.clientY - state.dragState.startY;
+            const box = $('#canvas-container');
+            centerOnRoot();
+            requestAnimationFrame(() => centerOnRoot());
+            window.addEventListener('load', () => { if (!state.userMoved) centerOnRoot(); });
+            let last = null;
+            new ResizeObserver(() => {
+                const r = canvasRect();
+                if (!state.userMoved) centerOnRoot();
+                else if (last) {
+                    state.viewport.x += (r.width - last.w) / 2;
+                    state.viewport.y += (r.height - last.h) / 2;
                     updateViewportTransform();
-                } else if (state.dragState.draggedNodeId) {
-                    // Moving a canvas node
-                    const pos = screenToCanvasPos(e.clientX, e.clientY);
-                    const node = state.nodes.find(n => n.id === state.dragState.draggedNodeId);
-                    if (node) {
-                        node.x = pos.x - state.dragState.nodeOffsetX;
-                        node.y = pos.y - state.dragState.nodeOffsetY;
-                        
-                        // 取消靠近自動感應與自動貼合，讓使用者自由控制位置
-                        renderCanvas();
-                    }
                 }
-            });
-
-            window.addEventListener('mouseup', () => {
-                if (state.dragState.isPanning) {
-                    state.dragState.isPanning = false;
-                    canvasContainer.style.cursor = 'grab';
-                }
-                
-                if (state.dragState.draggedNodeId) {
-                    // 釋放拖拽，保留位置改變，不自動切換階層
-                    state.dragState.draggedNodeId = null;
-                    state.dragState.potentialParentId = null;
-                    renderCanvas();
-                }
-            });
-
-            // Zoom on Wheel
-            canvasContainer.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                const zoomFactor = 1.1;
-                const oldZoom = state.viewport.zoom;
-                let newZoom = e.deltaY < 0 ? oldZoom * zoomFactor : oldZoom / zoomFactor;
-                newZoom = Math.min(Math.max(0.25, newZoom), 2.5); // Bound Zoom
-
-                const mouseX = e.clientX;
-                const mouseY = e.clientY;
-
-                // Zoom towards mouse pointer
-                state.viewport.x = mouseX - (mouseX - state.viewport.x) * (newZoom / oldZoom);
-                state.viewport.y = mouseY - (mouseY - state.viewport.y) * (newZoom / oldZoom);
-                state.viewport.zoom = newZoom;
-
-                updateViewportTransform();
-            }, { passive: false });
+                last = { w: r.width, h: r.height };
+            }).observe(box);
         }
+
+        Object.assign(state, { selectedNodeId: null, lastTap: { id: null, t: 0 }, userMoved: false });
+
+        function canvasRect() { return $('#canvas-container').getBoundingClientRect(); }
 
         function updateViewportTransform() {
-            const viewportEl = $('#canvas-viewport');
-            viewportEl.style.transform = `translate(${state.viewport.x}px, ${state.viewport.y}px) scale(${state.viewport.zoom})`;
+            $('#canvas-viewport').style.transform = `translate(${state.viewport.x}px, ${state.viewport.y}px) scale(${state.viewport.zoom})`;
             $('#zoom-indicator').innerText = `${Math.round(state.viewport.zoom * 100)}%`;
         }
 
         function screenToCanvasPos(clientX, clientY) {
+            const r = canvasRect();
             return {
-                x: (clientX - state.viewport.x) / state.viewport.zoom,
-                y: (clientY - state.viewport.y) / state.viewport.zoom
+                x: (clientX - r.left - state.viewport.x) / state.viewport.zoom,
+                y: (clientY - r.top - state.viewport.y) / state.viewport.zoom
             };
+        }
+
+        // 讓中心主題（節點中心）位於畫布可視區正中央
+        function centerOnRoot(resetZoom = false) {
+            const r = canvasRect();
+            const root = state.nodes.find(n => n.isRoot);
+            if (resetZoom) state.viewport.zoom = 1;
+            const z = state.viewport.zoom;
+            state.viewport.x = r.width / 2 - (root ? root.x : 0) * z;
+            state.viewport.y = r.height / 2 - (root ? root.y : 0) * z;
+            state.userMoved = false;
+            updateViewportTransform();
+        }
+
+        function zoomAt(cx, cy, newZoom) {
+            const old = state.viewport.zoom;
+            newZoom = Math.min(Math.max(0.25, newZoom), 2.5);
+            state.viewport.x = cx - (cx - state.viewport.x) * (newZoom / old);
+            state.viewport.y = cy - (cy - state.viewport.y) * (newZoom / old);
+            state.viewport.zoom = newZoom;
+            state.userMoved = true;
+            updateViewportTransform();
+        }
+
+        function zoomBy(f) {
+            const r = canvasRect();
+            zoomAt(r.width / 2, r.height / 2, state.viewport.zoom * f);
+        }
+
+        function isBackground(t) {
+            return t === $('#canvas-container') || t.id === 'canvas-viewport' || t.id === 'svg-layer' || t.id === 'nodes-container' || t.tagName === 'svg';
+        }
+
+        function selectNode(id) {
+            state.selectedNodeId = id;
+            $$('.mm-node').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
+        }
+
+        function setupCanvasPanAndZoom() {
+            const box = $('#canvas-container');
+            const ptrs = new Map();
+            let pan = null, pinch = null;
+            const rel = (e) => { const r = canvasRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+
+            const startPan = () => {
+                const p = [...ptrs.values()][0];
+                pan = { sx: p.x - state.viewport.x, sy: p.y - state.viewport.y };
+                pinch = null;
+            };
+            const startPinch = () => {
+                const [a, b] = [...ptrs.values()];
+                const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+                pinch = {
+                    d: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+                    z: state.viewport.zoom,
+                    fx: (mx - state.viewport.x) / state.viewport.zoom,
+                    fy: (my - state.viewport.y) / state.viewport.zoom
+                };
+                pan = null;
+            };
+
+            box.addEventListener('pointerdown', (e) => {
+                if (!isBackground(e.target)) return;
+                if (state.reparentingNodeId) {
+                    const root = state.nodes.find(n => n.isRoot);
+                    if (root) setParentNode(state.reparentingNodeId, root.id);
+                    cancelReparenting();
+                    return;
+                }
+                selectNode(null);
+                ptrs.set(e.pointerId, rel(e));
+                try { box.setPointerCapture(e.pointerId); } catch (_) {}
+                if (ptrs.size >= 2) startPinch(); else startPan();
+            });
+
+            box.addEventListener('pointermove', (e) => {
+                if (!ptrs.has(e.pointerId)) return;
+                ptrs.set(e.pointerId, rel(e));
+                state.userMoved = true;
+                if (pinch && ptrs.size >= 2) {
+                    const [a, b] = [...ptrs.values()];
+                    const nz = Math.min(Math.max(0.25, pinch.z * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d), 2.5);
+                    state.viewport.zoom = nz;
+                    state.viewport.x = (a.x + b.x) / 2 - pinch.fx * nz;
+                    state.viewport.y = (a.y + b.y) / 2 - pinch.fy * nz;
+                } else if (pan) {
+                    const p = ptrs.get(e.pointerId);
+                    state.viewport.x = p.x - pan.sx;
+                    state.viewport.y = p.y - pan.sy;
+                }
+                updateViewportTransform();
+            });
+
+            const endPtr = (e) => {
+                if (!ptrs.delete(e.pointerId)) return;
+                if (ptrs.size >= 2) startPinch();
+                else if (ptrs.size === 1) startPan();
+                else { pan = null; pinch = null; }
+            };
+            box.addEventListener('pointerup', endPtr);
+            box.addEventListener('pointercancel', endPtr);
+
+            box.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const p = rel(e);
+                zoomAt(p.x, p.y, state.viewport.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
+            }, { passive: false });
+
+            // 拖曳語詞卡（滑鼠 / 手指 / Apple Pencil 皆可）
+            window.addEventListener('pointermove', (e) => {
+                const d = state.dragState;
+                if (!d.draggedNodeId || e.pointerId !== d.pointerId) return;
+                if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 6) return;
+                d.moved = true;
+                state.userMoved = true;
+                const node = state.nodes.find(n => n.id === d.draggedNodeId);
+                if (!node) return;
+                const pos = screenToCanvasPos(e.clientX, e.clientY);
+                node.x = pos.x - d.nodeOffsetX;
+                node.y = pos.y - d.nodeOffsetY;
+                const el = $('#node-' + node.id);
+                if (el) el.style.transform = nodeTransform(node);
+                renderSVGConnections();
+            });
+
+            const endDrag = (e) => {
+                const d = state.dragState;
+                if (!d.draggedNodeId || e.pointerId !== d.pointerId) return;
+                const id = d.draggedNodeId;
+                d.draggedNodeId = null;
+                if (!d.moved && e.type === 'pointerup') {
+                    const now = Date.now();
+                    selectNode(id);
+                    if (state.lastTap.id === id && now - state.lastTap.t < 400) {
+                        state.lastTap = { id: null, t: 0 };
+                        const n = state.nodes.find(x => x.id === id);
+                        if (n) editNodeText(n);
+                    } else {
+                        state.lastTap = { id, t: now };
+                    }
+                }
+            };
+            window.addEventListener('pointerup', endDrag);
+            window.addEventListener('pointercancel', endDrag);
         }
 
         /* ==================== RENDERING ENGINE ==================== */
@@ -587,10 +677,10 @@
                 if (!parent) return;
 
                 // Center coordinates of nodes for smooth connection curves
-                const pX = parent.x + 70;
-                const pY = parent.y + 20;
-                const cX = node.x + 70;
-                const cY = node.y + 20;
+                const pX = parent.x;
+                const pY = parent.y;
+                const cX = node.x;
+                const cY = node.y;
 
                 const dx = cX - pX;
 
@@ -614,10 +704,10 @@
                 const targetParent = state.nodes.find(n => n.id === state.dragState.potentialParentId);
 
                 if (draggedNode && targetParent) {
-                    const pX = targetParent.x + 70;
-                    const pY = targetParent.y + 20;
-                    const cX = draggedNode.x + 70;
-                    const cY = draggedNode.y + 20;
+                    const pX = targetParent.x;
+                    const pY = targetParent.y;
+                    const cX = draggedNode.x;
+                    const cY = draggedNode.y;
                     const dx = cX - pX;
 
                     const pathData = `M ${pX} ${pY} C ${pX + dx * 0.5} ${pY}, ${pX + dx * 0.5} ${cY}, ${cX} ${cY}`;
@@ -652,15 +742,15 @@
                 if (emptyState) emptyState.classList.add('hidden');
                 state.unassignedWords.forEach(item => {
                     const card = document.createElement('div');
-                    card.className = 'bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between cursor-grab hover:border-indigo-400 hover:shadow-xs transition-all group pointer-events-auto';
+                    card.className = 'bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center justify-between cursor-grab hover:border-indigo-400 hover:shadow-xs transition-all group pointer-events-auto';
                     card.draggable = true;
                     card.innerHTML = `
-                        <span class="text-xs font-medium text-slate-700 truncate">${escapeHtml(item.text)}</span>
+                        <span class="text-base font-medium text-slate-700 truncate">${escapeHtml(item.text)}</span>
                         <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100">
-                            <button title="加至畫布" class="btn-add-to-canvas text-indigo-600 hover:text-indigo-800 text-xs px-1.5 py-1 hover:bg-indigo-50 rounded">
+                            <button title="加至畫布" class="btn-add-to-canvas text-indigo-600 hover:text-indigo-800 text-base px-3 py-2.5 hover:bg-indigo-50 rounded">
                                 <i class="fa-solid fa-plus"></i>
                             </button>
-                            <button title="刪除語詞" class="btn-remove-word text-slate-400 hover:text-rose-600 text-xs px-1.5 py-1 hover:bg-rose-50 rounded">
+                            <button title="刪除語詞" class="btn-remove-word text-slate-400 hover:text-rose-600 text-base px-3 py-2.5 hover:bg-rose-50 rounded">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </div>
@@ -704,8 +794,8 @@
             let x = 0, y = 0;
             if (parentNode) {
                 const siblingCount = state.nodes.filter(n => n.parentId === actualParentId).length;
-                const offsetAngle = (siblingCount * 0.6) - 0.5;
-                const dist = parentNode.isRoot ? 170 : 130;
+                const offsetAngle = (siblingCount * 0.75) - 0.5;
+                const dist = parentNode.isRoot ? 300 : 220;
                 x = parentNode.x + Math.cos(offsetAngle) * dist;
                 y = parentNode.y + Math.sin(offsetAngle) * dist;
             }
@@ -796,7 +886,7 @@
                 if (isDescendant(draggedNode.id, other.id)) continue;
 
                 const dx = (draggedNode.x + 60) - (other.x + 60);
-                const dy = (draggedNode.y + 20) - (other.y + 20);
+                const dy = (draggedNode.y) - (other.y);
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
                 if (dist < threshold) {
@@ -827,8 +917,8 @@
                             id: item.id || generateId(),
                             text: item.text,
                             parentId: rootNode ? rootNode.id : null,
-                            x: pos.x - 60,
-                            y: pos.y - 20,
+                            x: pos.x,
+                            y: pos.y,
                             isRoot: false,
                             color: BRANCH_COLORS[state.nodes.length % BRANCH_COLORS.length]
                         };
@@ -844,78 +934,61 @@
         }
 
         // Render HTML Interactive Nodes
+        function nodeTransform(node) {
+            return `translate(${node.x}px, ${node.y}px) translate(-50%, -50%)`;
+        }
+
         function renderHTMLNodes() {
             const container = $('#nodes-container');
             container.innerHTML = '';
-
             const isReparenting = !!state.reparentingNodeId;
-            const reparentingNode = isReparenting ? state.nodes.find(n => n.id === state.reparentingNodeId) : null;
+            const tb = 'w-11 h-11 flex items-center justify-center text-lg text-slate-500 hover:text-indigo-600 rounded-lg';
 
             state.nodes.forEach(node => {
                 const nodeEl = document.createElement('div');
-                const isTarget = state.dragState.potentialParentId === node.id;
                 const isBeingReparented = state.reparentingNodeId === node.id;
                 const isCandidate = isReparenting && !isBeingReparented && !isDescendant(node.id, state.reparentingNodeId);
 
                 nodeEl.id = `node-${node.id}`;
-                
-                let extraClasses = '';
-                if (isTarget) extraClasses += ' drop-target-active';
-                if (isBeingReparented) extraClasses += ' ring-4 ring-amber-400 border-amber-500 scale-105 z-30';
-                if (isCandidate) extraClasses += ' reparent-candidate z-30';
+                nodeEl.dataset.id = node.id;
 
-                nodeEl.className = `absolute pointer-events-auto rounded-xl shadow-md border bg-white px-4 py-2.5 min-w-[120px] max-w-[220px] cursor-move transition-all node-transition flex flex-col justify-center ${extraClasses}`;
-                
-                // Color and styling depending on whether root or branch
+                let extra = '';
+                if (isBeingReparented) extra += ' ring-4 ring-amber-400 border-amber-500 z-30';
+                if (isCandidate) extra += ' reparent-candidate z-30';
+                if (state.selectedNodeId === node.id) extra += ' selected';
+
+                nodeEl.className = `mm-node group absolute pointer-events-auto rounded-2xl shadow-md border bg-white px-5 py-3 min-w-[140px] max-w-[300px] cursor-move flex flex-col justify-center ${extra}`;
                 if (node.isRoot) {
-                    nodeEl.className += ' bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-sm border-indigo-700 shadow-indigo-200';
+                    nodeEl.className += ' bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold border-indigo-700 shadow-indigo-200';
                 } else {
                     nodeEl.style.borderColor = node.color || '#cbd5e1';
-                    nodeEl.style.borderLeftWidth = '6px';
+                    nodeEl.style.borderLeftWidth = '8px';
                 }
+                nodeEl.style.transform = nodeTransform(node);
 
-                nodeEl.style.transform = `translate(${node.x}px, ${node.y}px)`;
-
-                // Candidate Badge if in reparenting mode
-                let candidateBadge = '';
+                let badge = '';
                 if (isCandidate) {
-                    candidateBadge = `<span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-1 self-start pointer-events-none">點擊設為父節點</span>`;
+                    badge = `<span class="text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 mt-1 self-start pointer-events-none">點擊設為父節點</span>`;
                 } else if (isBeingReparented) {
-                    candidateBadge = `<span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 mt-1 self-start pointer-events-none">選擇新父節點中...</span>`;
+                    badge = `<span class="text-sm font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 mt-1 self-start pointer-events-none">選擇新父節點中...</span>`;
                 }
 
-                // Node Content Template
                 nodeEl.innerHTML = `
-                    <div class="flex items-center justify-between gap-2">
-                        <span class="font-medium text-xs truncate ${node.isRoot ? 'text-white font-bold text-sm' : 'text-slate-800'}">${escapeHtml(node.text)}</span>
-                        <div class="node-actions hidden group-hover:flex items-center gap-1">
+                    <span class="leading-snug break-words ${node.isRoot ? 'text-2xl font-bold text-white' : 'text-xl font-medium text-slate-800'}">${escapeHtml(node.text)}</span>
+                    ${badge}
+                    <div class="node-actions absolute left-1/2 top-full pt-2" style="transform:translateX(-50%)">
+                        <div class="flex items-center gap-1 bg-white border border-slate-200 rounded-xl shadow-lg p-1 w-max">
                             ${!node.isRoot ? `
-                            <button onclick="startReparenting('${node.id}', event)" title="變更階層 / 重新連線" class="text-slate-400 hover:text-indigo-600 text-xs px-1">
-                                <i class="fa-solid fa-link"></i>
-                            </button>
-                            <button onclick="detachToRoot('${node.id}', event)" title="移至中心主題第一層" class="text-slate-400 hover:text-indigo-600 text-xs px-1">
-                                <i class="fa-solid fa-turn-up"></i>
-                            </button>
-                            ` : ''}
-                            <button onclick="editNodeById('${node.id}')" title="編輯主題文字" class="${node.isRoot ? 'text-white/80 hover:text-white' : 'text-slate-400 hover:text-indigo-600'} text-xs px-1">
-                                <i class="fa-solid fa-pen"></i>
-                            </button>
-                            ${!node.isRoot ? `
-                            <button onclick="deleteNode('${node.id}')" title="解綁回語詞庫" class="text-slate-400 hover:text-rose-500 text-xs px-1">
-                                <i class="fa-solid fa-xmark"></i>
-                            </button>` : ''}
+                            <button onclick="startReparenting('${node.id}', event)" title="變更階層 / 重新連線" class="${tb}"><i class="fa-solid fa-link"></i></button>
+                            <button onclick="detachToRoot('${node.id}', event)" title="移至中心主題第一層" class="${tb}"><i class="fa-solid fa-turn-up"></i></button>` : ''}
+                            <button onclick="editNodeById('${node.id}')" title="編輯主題文字" class="${tb}"><i class="fa-solid fa-pen"></i></button>
+                            ${!node.isRoot ? `<button onclick="deleteNode('${node.id}')" title="解綁回語詞庫" class="${tb} hover:!text-rose-500"><i class="fa-solid fa-xmark"></i></button>` : ''}
                         </div>
                     </div>
-                    ${candidateBadge}
                 `;
 
-                // Add Hover Action Bar
-                nodeEl.classList.add('group');
-
-                // Mouse Click Events
                 nodeEl.addEventListener('click', (e) => {
                     if (e.target.closest('button')) return;
-                    
                     if (state.reparentingNodeId) {
                         e.stopPropagation();
                         if (isCandidate) {
@@ -927,41 +1000,27 @@
                     }
                 });
 
-                // Mouse Events for Canvas Node Dragging
-                nodeEl.addEventListener('mousedown', (e) => {
+                nodeEl.addEventListener('pointerdown', (e) => {
                     if (e.target.closest('button') || state.reparentingNodeId) return;
-                    e.stopPropagation();
-                    state.dragState.draggedNodeId = node.id;
-                    const pos = screenToCanvasPos(e.clientX, e.clientY);
-                    state.dragState.nodeOffsetX = pos.x - node.x;
-                    state.dragState.nodeOffsetY = pos.y - node.y;
-                });
-
-                // Context menu / Node Edit on Double Click
-                nodeEl.addEventListener('dblclick', (e) => {
-                    e.stopPropagation();
-                    editNodeText(node);
-                });
-
-                // Drop Receiver Target for External Word Dragging
-                nodeEl.addEventListener('dragover', (e) => {
                     e.preventDefault();
-                    nodeEl.classList.add('drop-target-active');
+                    e.stopPropagation();
+                    const pos = screenToCanvasPos(e.clientX, e.clientY);
+                    Object.assign(state.dragState, {
+                        draggedNodeId: node.id, pointerId: e.pointerId, moved: false,
+                        sx: e.clientX, sy: e.clientY,
+                        nodeOffsetX: pos.x - node.x, nodeOffsetY: pos.y - node.y
+                    });
+                    try { nodeEl.setPointerCapture(e.pointerId); } catch (_) {}
                 });
-                nodeEl.addEventListener('dragleave', () => {
-                    nodeEl.classList.remove('drop-target-active');
-                });
+
+                nodeEl.addEventListener('dragover', (e) => { e.preventDefault(); nodeEl.classList.add('drop-target-active'); });
+                nodeEl.addEventListener('dragleave', () => nodeEl.classList.remove('drop-target-active'));
                 nodeEl.addEventListener('drop', (e) => {
                     e.preventDefault();
                     nodeEl.classList.remove('drop-target-active');
                     const wordData = e.dataTransfer.getData('text/plain');
                     if (wordData) {
-                        try {
-                            const item = JSON.parse(wordData);
-                            addWordToCanvas(item, node.id);
-                        } catch (err) {
-                            console.error(err);
-                        }
+                        try { addWordToCanvas(JSON.parse(wordData), node.id); } catch (err) { console.error(err); }
                     }
                 });
 
@@ -1033,13 +1092,10 @@
             rootNode.y = 0;
 
             // Layout Children Radially
-            layoutSubtree(tree, 0, Math.PI * 2, 180);
-
-            // Re-center viewport smoothly
-            state.viewport.x = window.innerWidth / 2;
-            state.viewport.y = window.innerHeight / 2;
+            layoutSubtree(tree, 0, Math.PI * 2, 300);
 
             renderCanvas();
+            centerOnRoot();
             showToast('已完成自動階層排版！', 'success');
         }
 
@@ -1063,11 +1119,11 @@
                 const childNode = childTree.node;
 
                 childNode.x = treeNode.node.x + Math.cos(angle) * radius;
-                childNode.y = treeNode.node.y + Math.sin(angle) * radius * 0.75; // Aspect adjustment
+                childNode.y = treeNode.node.y + Math.sin(angle) * radius * 0.85; // Aspect adjustment
 
                 // Recursively layout sub-children in a wedge angle
                 const wedge = angleStep * 0.8;
-                layoutSubtree(childTree, angle - wedge / 2, angle + wedge / 2, radius + 140);
+                layoutSubtree(childTree, angle - wedge / 2, angle + wedge / 2, radius + 240);
             });
         }
 
@@ -1079,57 +1135,42 @@
                 return;
             }
 
-            // Calculate Bounding Box of all nodes
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            state.nodes.forEach(n => {
-                minX = Math.min(minX, n.x);
-                minY = Math.min(minY, n.y);
-                maxX = Math.max(maxX, n.x + 180);
-                maxY = Math.max(maxY, n.y + 60);
+            const meas = document.createElement('canvas').getContext('2d');
+            const items = state.nodes.map(n => {
+                const fs = n.isRoot ? 24 : 20;
+                meas.font = `${n.isRoot ? 'bold ' : ''}${fs}px sans-serif`;
+                return { n, fs, w: Math.max(140, Math.ceil(meas.measureText(n.text).width) + 48), h: 52 };
             });
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            items.forEach(({ n, w, h }) => {
+                minX = Math.min(minX, n.x - w / 2); maxX = Math.max(maxX, n.x + w / 2);
+                minY = Math.min(minY, n.y - h / 2); maxY = Math.max(maxY, n.y + h / 2);
+            });
+            const padding = 60;
+            minX -= padding; minY -= padding;
+            const width = Math.max(400, maxX - minX + padding);
+            const height = Math.max(300, maxY - minY + padding);
 
-            const padding = 80;
-            minX -= padding;
-            minY -= padding;
-            const width = Math.max(400, maxX - minX + padding * 2);
-            const height = Math.max(300, maxY - minY + padding * 2);
-
-            // Create Clean Standalone SVG Representation
             let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${minX} ${minY} ${width} ${height}">`;
-            
-            // White Background Layer
             svgString += `<rect x="${minX}" y="${minY}" width="${width}" height="${height}" fill="#ffffff" />`;
 
-            // Draw Connections
             state.nodes.forEach(node => {
-                if (node.parentId) {
-                    const parent = state.nodes.find(n => n.id === node.parentId);
-                    if (parent) {
-                        const pX = parent.x + 60;
-                        const pY = parent.y + 20;
-                        const cX = node.x + 60;
-                        const cY = node.y + 20;
-                        const dx = cX - pX;
-                        const d = `M ${pX} ${pY} C ${pX + dx * 0.5} ${pY}, ${pX + dx * 0.5} ${cY}, ${cX} ${cY}`;
-                        svgString += `<path d="${d}" fill="none" stroke="${node.color || '#94a3b8'}" stroke-width="3" opacity="0.9" />`;
-                    }
-                }
+                const parent = node.parentId && state.nodes.find(n => n.id === node.parentId);
+                if (!parent) return;
+                const dx = node.x - parent.x;
+                const d = `M ${parent.x} ${parent.y} C ${parent.x + dx * 0.5} ${parent.y}, ${parent.x + dx * 0.5} ${node.y}, ${node.x} ${node.y}`;
+                svgString += `<path d="${d}" fill="none" stroke="${node.color || '#94a3b8'}" stroke-width="3" opacity="0.9" />`;
             });
 
-            // Draw Nodes
-            state.nodes.forEach(node => {
-                const fill = node.isRoot ? '#4f46e5' : '#ffffff';
-                const textFill = node.isRoot ? '#ffffff' : '#1e293b';
-                const stroke = node.isRoot ? '#4338ca' : (node.color || '#cbd5e1');
-
-                svgString += `
-                    <g transform="translate(${node.x}, ${node.y})">
-                        <rect width="140" height="40" rx="10" fill="${fill}" stroke="${stroke}" stroke-width="${node.isRoot ? '0' : '2'}" />
-                        <text x="70" y="24" text-anchor="middle" fill="${textFill}" font-family="sans-serif" font-size="13" font-weight="${node.isRoot ? 'bold' : 'normal'}">${escapeXml(node.text)}</text>
-                    </g>
-                `;
+            items.forEach(({ n, fs, w, h }) => {
+                const fill = n.isRoot ? '#4f46e5' : '#ffffff';
+                const textFill = n.isRoot ? '#ffffff' : '#1e293b';
+                const stroke = n.isRoot ? '#4338ca' : (n.color || '#cbd5e1');
+                svgString += `<g transform="translate(${n.x - w / 2}, ${n.y - h / 2})">
+                    <rect width="${w}" height="${h}" rx="14" fill="${fill}" stroke="${stroke}" stroke-width="${n.isRoot ? 0 : 2}" />
+                    <text x="${w / 2}" y="${h / 2 + fs * 0.35}" text-anchor="middle" fill="${textFill}" font-family="sans-serif" font-size="${fs}" font-weight="${n.isRoot ? 'bold' : 'normal'}">${escapeXml(n.text)}</text>
+                </g>`;
             });
-
             svgString += `</svg>`;
 
             if (format === 'svg') {
@@ -1250,18 +1291,14 @@
 
             // Canvas Zoom Controls
             $('#btn-zoom-in')?.addEventListener('click', () => {
-                state.viewport.zoom = Math.min(2.5, state.viewport.zoom * 1.2);
-                updateViewportTransform();
+                zoomBy(1.2);
             });
             $('#btn-zoom-out')?.addEventListener('click', () => {
-                state.viewport.zoom = Math.max(0.25, state.viewport.zoom / 1.2);
-                updateViewportTransform();
+                zoomBy(1 / 1.2);
             });
+            $('#btn-center-view')?.addEventListener('click', () => centerOnRoot(true));
             $('#btn-re-center')?.addEventListener('click', () => {
-                state.viewport.x = window.innerWidth / 2;
-                state.viewport.y = window.innerHeight / 2;
-                state.viewport.zoom = 1;
-                updateViewportTransform();
+                centerOnRoot(true);
             });
 
             // Direct Word Input in Sidebar
@@ -1296,12 +1333,12 @@
                     const toggleIcon = $('#left-toggle-icon');
                     if (sidebarOpen) {
                         leftSidebar.style.marginLeft = '0px';
-                        toggleLeftBtn.style.left = '288px';
-                        if (toggleIcon) toggleIcon.className = 'fa-solid fa-chevron-left text-xs';
+                        toggleLeftBtn.style.left = '320px';
+                        if (toggleIcon) toggleIcon.className = 'fa-solid fa-chevron-left text-base';
                     } else {
-                        leftSidebar.style.marginLeft = '-288px';
+                        leftSidebar.style.marginLeft = '-320px';
                         toggleLeftBtn.style.left = '0px';
-                        if (toggleIcon) toggleIcon.className = 'fa-solid fa-chevron-right text-xs';
+                        if (toggleIcon) toggleIcon.className = 'fa-solid fa-chevron-right text-base';
                     }
                 });
             }
@@ -1314,15 +1351,15 @@
 
             if (tabText && tabFile && contentText && contentFile) {
                 tabText.addEventListener('click', () => {
-                    tabText.className = 'py-3 px-4 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2';
-                    tabFile.className = 'py-3 px-4 text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2 border-b-2 border-transparent';
+                    tabText.className = 'py-3 px-4 text-base font-bold border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2';
+                    tabFile.className = 'py-3 px-4 text-base font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2 border-b-2 border-transparent';
                     contentText.classList.remove('hidden');
                     contentFile.classList.add('hidden');
                 });
 
                 tabFile.addEventListener('click', () => {
-                    tabFile.className = 'py-3 px-4 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2';
-                    tabText.className = 'py-3 px-4 text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2 border-b-2 border-transparent';
+                    tabFile.className = 'py-3 px-4 text-base font-bold border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2';
+                    tabText.className = 'py-3 px-4 text-base font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2 border-b-2 border-transparent';
                     contentFile.classList.remove('hidden');
                     contentText.classList.add('hidden');
                 });
