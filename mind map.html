@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>互動式心智圖語詞卡排版系統</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -63,6 +63,7 @@
         }
         .drop-target-active {
             animation: pulse-border 1.2s infinite ease-in-out !important;
+            transform: scale(1.06) !important;
         }
 
         /* Disable user text selection during drag operations */
@@ -81,51 +82,49 @@
             cursor: pointer !important;
         }
 
-        html, body { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
-        input, textarea { -webkit-user-select: text; user-select: text; }
-        #canvas-container { touch-action: none; }
-        #canvas-viewport { transform-origin: 0 0; }
-        .mm-node { touch-action: none; -webkit-touch-callout: none; transition: box-shadow .2s ease !important; }
-        .mm-node.selected { z-index: 40; }
-        .mm-node:hover { z-index: 35; }
-        .node-actions { display: none; }
-        .mm-node.selected .node-actions { display: block; }
-        @media (hover: hover) { .mm-node:hover .node-actions { display: block; } }
+        /* ===== v3 tools ===== */
+        .tool-pen .node-el, .tool-text .node-el, .tool-erase .node-el { pointer-events: none !important; }
+        .tool-pen .edge-hit, .tool-text .edge-hit, .tool-erase .edge-hit { pointer-events: none !important; }
+        .tool-pen, .tool-text { cursor: crosshair !important; }
+        .tool-erase { cursor: cell !important; }
+        .tool-connect .node-el, .tool-connect .edge-hit { cursor: pointer !important; }
+        .tool-connect .node-actions { display: none !important; }
+        .edge-hit:hover { stroke: rgba(245, 158, 11, 0.30); }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans h-screen w-screen overflow-hidden flex flex-col no-select" style="height:100vh;height:100dvh">
+<body class="bg-slate-100 text-slate-800 font-sans h-screen w-screen overflow-hidden flex flex-col no-select">
 
     <!-- 頂部導航與功能列 Navigation Header -->
-    <header class="min-h-16 flex-wrap gap-y-2 py-2 bg-white border-b border-slate-200 px-4 flex items-center justify-between shadow-sm z-30 shrink-0">
+    <header class="h-16 bg-white border-b border-slate-200 px-4 flex items-center justify-between shadow-sm z-30 shrink-0">
         <!-- Logo & Title -->
         <div class="flex items-center space-x-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-200">
-                <i class="fa-solid fa-sitemap text-2xl"></i>
+                <i class="fa-solid fa-sitemap text-lg"></i>
             </div>
             <div>
-                <h1 class="font-bold text-slate-800 text-2xl leading-tight flex items-center gap-2">
+                <h1 class="font-bold text-slate-800 text-lg leading-tight flex items-center gap-2">
                     心智圖語詞卡工具
-                    
+                    <span class="text-xs font-semibold px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-200">v3.0</span>
                 </h1>
-                
+                <p class="text-xs text-slate-400">自由連線・線連線・箭頭・手繪註記</p>
             </div>
         </div>
 
         <!-- Central Action Group -->
-        <div class="flex items-center bg-slate-100 p-1.5 rounded-xl border border-slate-200 space-x-1">
-            <button id="btn-edit-root" class="px-4 py-2.5 text-base font-medium text-slate-700 hover:bg-white hover:shadow-xs rounded-lg transition-all flex items-center gap-1.5">
+        <div class="hidden md:flex items-center bg-slate-100 p-1.5 rounded-xl border border-slate-200 space-x-1">
+            <button id="btn-edit-root" class="px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white hover:shadow-xs rounded-lg transition-all flex items-center gap-1.5">
                 <i class="fa-solid fa-pen-to-square text-indigo-500"></i> 設定中心主題
             </button>
             <div class="h-4 w-px bg-slate-300"></div>
-            <button id="btn-open-import" class="px-4 py-2.5 text-base font-medium text-slate-700 hover:bg-white hover:shadow-xs rounded-lg transition-all flex items-center gap-1.5">
+            <button id="btn-open-import" class="px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white hover:shadow-xs rounded-lg transition-all flex items-center gap-1.5">
                 <i class="fa-solid fa-file-import text-indigo-500"></i> 匯入 / 輸入語詞
             </button>
             <div class="h-4 w-px bg-slate-300"></div>
-            <button id="btn-auto-layout" class="px-4 py-2.5 text-base font-medium text-slate-700 hover:bg-white hover:shadow-xs rounded-lg transition-all flex items-center gap-1.5">
+            <button id="btn-auto-layout" class="px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white hover:shadow-xs rounded-lg transition-all flex items-center gap-1.5">
                 <i class="fa-solid fa-diagram-project text-emerald-500"></i> 自動排版
             </button>
             <div class="h-4 w-px bg-slate-300"></div>
-            <button id="btn-reset-map" class="px-4 py-2.5 text-base font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-all flex items-center gap-1.5">
+            <button id="btn-reset-map" class="px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-all flex items-center gap-1.5">
                 <i class="fa-solid fa-rotate-left"></i> 清空畫布
             </button>
         </div>
@@ -133,28 +132,28 @@
         <!-- Right Tool Buttons -->
         <div class="flex items-center space-x-2">
             <!-- Viewport reset -->
-            <button id="btn-center-view" title="重置畫面檢視" class="w-12 h-12 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all">
+            <button id="btn-center-view" title="重置畫面檢視" class="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all">
                 <i class="fa-solid fa-crosshairs"></i>
             </button>
 
             <!-- Export Dropdown -->
             <div class="relative inline-block text-left">
-                <button id="btn-export-dropdown" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-base rounded-xl shadow-md shadow-indigo-200 transition-all flex items-center gap-2">
+                <button id="btn-export-dropdown" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl shadow-md shadow-indigo-200 transition-all flex items-center gap-2">
                     <i class="fa-solid fa-download"></i> 匯出圖檔
-                    <i class="fa-solid fa-chevron-down text-sm"></i>
+                    <i class="fa-solid fa-chevron-down text-[10px]"></i>
                 </button>
                 <div id="export-menu" class="hidden absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50">
-                    <button id="btn-export-png" class="w-full text-left px-4 py-2.5 text-base text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2">
-                        <i class="fa-regular fa-image text-xl"></i> 匯出為 PNG 圖檔
+                    <button id="btn-export-png" class="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2">
+                        <i class="fa-regular fa-image text-base"></i> 匯出為 PNG 圖檔
                     </button>
-                    <button id="btn-export-svg" class="w-full text-left px-4 py-2.5 text-base text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2">
-                        <i class="fa-solid fa-vector-square text-xl"></i> 匯出為 SVG 向量圖
+                    <button id="btn-export-svg" class="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2">
+                        <i class="fa-solid fa-vector-square text-base"></i> 匯出為 SVG 向量圖
                     </button>
                 </div>
             </div>
 
-            <button id="btn-open-help" class="w-12 h-12 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:text-slate-800 transition-all">
-                <i class="fa-solid fa-circle-question text-xl"></i>
+            <button id="btn-open-help" class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:text-slate-800 transition-all">
+                <i class="fa-solid fa-circle-question text-base"></i>
             </button>
         </div>
     </header>
@@ -163,14 +162,14 @@
     <div class="flex-1 relative flex overflow-hidden">
 
         <!-- 左側語詞庫 Side Drawer (Left Word Bank) -->
-        <aside id="left-sidebar" class="w-80 bg-white border-r border-slate-200 flex flex-col z-20 shadow-lg transition-all duration-300 relative">
+        <aside id="left-sidebar" class="w-72 bg-white border-r border-slate-200 flex flex-col z-20 shadow-lg transition-all duration-300 relative">
             <div class="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <div class="flex items-center gap-2">
                     <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
-                    <h2 class="font-bold text-base text-slate-700 uppercase tracking-wider">待使用語詞庫</h2>
-                    <span id="word-count-badge" class="px-2 py-0.5 bg-slate-200 text-slate-600 rounded-full text-sm font-semibold">0</span>
+                    <h2 class="font-bold text-xs text-slate-700 uppercase tracking-wider">待使用語詞庫</h2>
+                    <span id="word-count-badge" class="px-2 py-0.5 bg-slate-200 text-slate-600 rounded-full text-[11px] font-semibold">0</span>
                 </div>
-                <button id="btn-quick-add" title="快速新增單字" class="text-base text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1">
+                <button id="btn-quick-add" title="快速新增單字" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1">
                     <i class="fa-solid fa-plus"></i> 新增
                 </button>
             </div>
@@ -178,12 +177,12 @@
             <!-- 快速直接輸入與新增列 -->
             <div class="p-3 border-b border-slate-100 space-y-2">
                 <div class="flex items-center gap-1.5">
-                    <input type="text" id="direct-word-input" placeholder="輸入語詞按 Enter 新增..." class="flex-1 px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
-                    <button id="btn-direct-add-word" title="新增至語詞庫" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-base rounded-lg transition-all shrink-0 flex items-center justify-center">
+                    <input type="text" id="direct-word-input" placeholder="輸入語詞按 Enter 新增..." class="flex-1 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                    <button id="btn-direct-add-word" title="新增至語詞庫" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-lg transition-all shrink-0 flex items-center justify-center">
                         <i class="fa-solid fa-plus"></i>
                     </button>
                 </div>
-                <div class="flex items-center justify-between text-sm text-slate-400 pt-1">
+                <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1">
                     <span>提示：拖拽或點擊加至畫布</span>
                     <button id="btn-batch-add-all" class="text-indigo-600 hover:underline">全選投入</button>
                 </div>
@@ -194,8 +193,8 @@
                 <!-- 空狀態 Prompt -->
                 <div id="empty-word-bank" class="py-12 text-center text-slate-400 hidden">
                     <i class="fa-solid fa-box-open text-3xl mb-2 text-slate-300"></i>
-                    <p class="text-base">語詞庫目前為空</p>
-                    <button id="empty-import-trigger" class="mt-3 text-base text-indigo-600 underline font-medium">點擊匯入新語詞</button>
+                    <p class="text-xs">語詞庫目前為空</p>
+                    <button id="empty-import-trigger" class="mt-3 text-xs text-indigo-600 underline font-medium">點擊匯入新語詞</button>
                 </div>
                 <!-- 語詞卡片列表區 -->
                 <div id="word-cards-list" class="grid grid-cols-1 gap-2 align-content-start"></div>
@@ -203,24 +202,60 @@
         </aside>
 
         <!-- Toggle Left Drawer Button -->
-        <button id="btn-toggle-left-bar" class="absolute left-80 top-4 z-30 bg-white border border-slate-200 w-6 h-12 rounded-r-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 shadow-md transition-all">
-            <i class="fa-solid fa-chevron-left text-base" id="left-toggle-icon"></i>
+        <button id="btn-toggle-left-bar" class="absolute left-72 top-4 z-30 bg-white border border-slate-200 w-6 h-12 rounded-r-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 shadow-md transition-all">
+            <i class="fa-solid fa-chevron-left text-xs" id="left-toggle-icon"></i>
         </button>
 
         <!-- 中央無限互動畫布 Mind Map Interactive Canvas -->
         <main id="canvas-container" class="flex-1 relative overflow-hidden canvas-bg-grid cursor-grab active:cursor-grabbing">
             
-            <!-- 階層變更模式頂部提示 Banner -->
-            <div id="reparent-banner" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-emerald-600 text-white text-base px-5 py-2.5 rounded-full shadow-xl flex items-center gap-3 border border-emerald-400 animate-bounce">
-                <i class="fa-solid fa-diagram-next text-xl"></i>
-                <span>請點擊畫面上要連結的<strong>「目標父節點」</strong>，或點擊空白處移至中心主題</span>
-                <button id="btn-cancel-reparent" class="bg-emerald-800 hover:bg-emerald-900 text-white px-2.5 py-1 rounded-full text-sm transition-all font-semibold ml-2">
-                    取消
-                </button>
+            <!-- 工具列 -->
+            <div id="tool-palette" class="canvas-ui absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-white/95 backdrop-blur border border-slate-200 p-1.5 rounded-2xl shadow-lg text-xs">
+                <button data-tool="select" title="選取 / 拖曳 / 點線條編輯" class="tool-btn px-3 py-1.5 rounded-xl font-medium flex items-center gap-1.5 text-slate-600 hover:bg-slate-100"><i class="fa-solid fa-arrow-pointer"></i> 選取</button>
+                <button data-tool="connect" title="連線：點起點再點終點（可連到線上）" class="tool-btn px-3 py-1.5 rounded-xl font-medium flex items-center gap-1.5 text-slate-600 hover:bg-slate-100"><i class="fa-solid fa-link"></i> 連線</button>
+                <button data-tool="pen" title="手繪註記" class="tool-btn px-3 py-1.5 rounded-xl font-medium flex items-center gap-1.5 text-slate-600 hover:bg-slate-100"><i class="fa-solid fa-pen"></i> 畫筆</button>
+                <button data-tool="text" title="文字註記" class="tool-btn px-3 py-1.5 rounded-xl font-medium flex items-center gap-1.5 text-slate-600 hover:bg-slate-100"><i class="fa-solid fa-font"></i> 文字</button>
+                <button data-tool="erase" title="橡皮擦（刪除註記）" class="tool-btn px-3 py-1.5 rounded-xl font-medium flex items-center gap-1.5 text-slate-600 hover:bg-slate-100"><i class="fa-solid fa-eraser"></i> 橡皮擦</button>
+            </div>
+
+            <!-- 連線模式提示 -->
+            <div id="reparent-banner" class="canvas-ui hidden absolute top-[72px] left-1/2 -translate-x-1/2 z-40 bg-emerald-600 text-white text-xs px-5 py-2.5 rounded-full shadow-xl flex items-center gap-3 border border-emerald-400 whitespace-nowrap">
+                <i class="fa-solid fa-link text-base"></i>
+                <span id="connect-hint"></span>
+                <button id="btn-cancel-reparent" class="bg-emerald-800 hover:bg-emerald-900 text-white px-2.5 py-1 rounded-full text-[11px] transition-all font-semibold ml-2">結束連線</button>
+            </div>
+
+            <!-- 畫筆選項 -->
+            <div id="pen-options" class="canvas-ui hidden absolute top-[72px] left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-white/95 border border-slate-200 rounded-2xl shadow-lg px-3 py-1.5 text-xs text-slate-600 whitespace-nowrap">
+                <span>顏色</span>
+                <button class="pen-color w-5 h-5 rounded-full" data-color="#ef4444" style="background:#ef4444"></button>
+                <button class="pen-color w-5 h-5 rounded-full" data-color="#2563eb" style="background:#2563eb"></button>
+                <button class="pen-color w-5 h-5 rounded-full" data-color="#16a34a" style="background:#16a34a"></button>
+                <button class="pen-color w-5 h-5 rounded-full" data-color="#111827" style="background:#111827"></button>
+                <button class="pen-color w-5 h-5 rounded-full" data-color="#f59e0b" style="background:#f59e0b"></button>
+                <span class="ml-1">粗細</span>
+                <select id="pen-width" class="border border-slate-200 rounded-md px-1 py-0.5 bg-white"><option value="2">細</option><option value="4" selected>中</option><option value="8">粗</option></select>
+                <button id="pen-undo" class="px-2 py-1 rounded-lg hover:bg-slate-100"><i class="fa-solid fa-rotate-left"></i> 復原</button>
+                <button id="pen-clear" class="px-2 py-1 rounded-lg text-rose-600 hover:bg-rose-50"><i class="fa-regular fa-trash-can"></i> 清除註記</button>
+                <span class="text-slate-400">畫筆：按住拖曳｜文字：點一下畫布</span>
+            </div>
+
+            <!-- 線條編輯浮動工具列 -->
+            <div id="edge-toolbar" class="canvas-ui hidden absolute z-30 flex items-center gap-2 bg-white border border-slate-200 rounded-xl shadow-xl px-2.5 py-1.5 text-xs text-slate-600 whitespace-nowrap" style="left:0;top:0">
+                <label class="flex items-center gap-1">起點
+                    <select id="et-start" class="border border-slate-200 rounded-md px-1 py-0.5 bg-white"><option value="none">無</option><option value="triangle">▶ 實心</option><option value="open">＞ 開口</option><option value="dot">● 圓點</option><option value="diamond">◆ 菱形</option></select>
+                </label>
+                <label class="flex items-center gap-1">終點
+                    <select id="et-end" class="border border-slate-200 rounded-md px-1 py-0.5 bg-white"><option value="none">無</option><option value="triangle">▶ 實心</option><option value="open">＞ 開口</option><option value="dot">● 圓點</option><option value="diamond">◆ 菱形</option></select>
+                </label>
+                <input type="color" id="et-color" title="線條顏色" class="w-6 h-6 p-0 border border-slate-200 rounded cursor-pointer bg-white">
+                <button id="et-dash" class="px-2 py-1 rounded-lg hover:bg-slate-100" title="實線 / 虛線">虛線</button>
+                <button id="et-swap" class="px-2 py-1 rounded-lg hover:bg-slate-100" title="對調起點與終點"><i class="fa-solid fa-right-left"></i></button>
+                <button id="et-delete" class="px-2 py-1 rounded-lg text-rose-600 hover:bg-rose-50" title="刪除此線 (Delete)"><i class="fa-solid fa-trash-can"></i> 刪除</button>
             </div>
 
             <!-- Transform Wrapper -->
-            <div id="canvas-viewport" class="absolute inset-0 pointer-events-none transform-gpu">
+            <div id="canvas-viewport" class="absolute inset-0 origin-0 transform-gpu">
                 <!-- SVG Connections Layer -->
                 <svg id="svg-layer" class="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
                     <defs>
@@ -237,27 +272,31 @@
 
                 <!-- Nodes HTML Layer -->
                 <div id="nodes-container" class="absolute inset-0 pointer-events-none"></div>
+                <svg id="svg-top" class="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+                    <g id="svg-annotations"></g>
+                    <g id="svg-preview"></g>
+                </svg>
             </div>
 
             <!-- Canvas Floating Controls (Zoom & Quick Tools) -->
-            <div class="absolute right-6 bottom-6 flex flex-col space-y-2 bg-white/90 backdrop-blur border border-slate-200 p-1.5 rounded-2xl shadow-xl z-20">
-                <button id="btn-zoom-in" title="放大 (+)" class="w-12 h-12 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-all">
+            <div class="canvas-ui absolute right-6 bottom-6 flex flex-col space-y-2 bg-white/90 backdrop-blur border border-slate-200 p-1.5 rounded-2xl shadow-xl z-20">
+                <button id="btn-zoom-in" title="放大 (+)" class="w-9 h-9 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-all">
                     <i class="fa-solid fa-plus"></i>
                 </button>
-                <span id="zoom-indicator" class="text-sm font-semibold text-slate-500 text-center py-0.5">100%</span>
-                <button id="btn-zoom-out" title="縮小 (-)" class="w-12 h-12 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-all">
+                <span id="zoom-indicator" class="text-[11px] font-semibold text-slate-500 text-center py-0.5">100%</span>
+                <button id="btn-zoom-out" title="縮小 (-)" class="w-9 h-9 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-all">
                     <i class="fa-solid fa-minus"></i>
                 </button>
                 <div class="w-full h-px bg-slate-200 my-1"></div>
-                <button id="btn-re-center" title="重置視角" class="w-12 h-12 rounded-xl hover:bg-slate-100 flex items-center justify-center text-indigo-600 transition-all">
+                <button id="btn-re-center" title="重置視角" class="w-9 h-9 rounded-xl hover:bg-slate-100 flex items-center justify-center text-indigo-600 transition-all">
                     <i class="fa-solid fa-arrows-to-dot"></i>
                 </button>
             </div>
 
             <!-- Canvas Helper Overlay Badge -->
-            <div class="absolute left-6 bottom-6 pointer-events-none bg-white/80 backdrop-blur border border-slate-200/80 px-4 py-2.5 rounded-xl shadow-xs text-slate-500 text-base flex items-center gap-2">
+            <div class="absolute left-6 bottom-6 pointer-events-none bg-white/80 backdrop-blur border border-slate-200/80 px-3 py-1.5 rounded-xl shadow-xs text-slate-500 text-xs flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="hidden sm:inline">拖拽自由擺放語詞位置 • 點擊語詞卡上的 🔗 鈕手動變更階層連線</span>
+                <span class="hidden sm:inline">拖拽擺放語詞 • 用上方「連線」工具建立線條（可連到另一條線）• 點線條可設定箭頭</span>
             </div>
         </main>
     </div>
@@ -273,19 +312,19 @@
                     <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
                         <i class="fa-solid fa-file-circle-plus"></i>
                     </div>
-                    <h3 class="font-bold text-slate-800 text-xl">匯入與批次建立語詞卡</h3>
+                    <h3 class="font-bold text-slate-800 text-base">匯入與批次建立語詞卡</h3>
                 </div>
                 <button class="modal-close text-slate-400 hover:text-slate-600 transition-all w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center">
-                    <i class="fa-solid fa-xmark text-2xl"></i>
+                    <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
             <!-- Modal Tabs Nav -->
             <div class="flex border-b border-slate-200 bg-slate-50 px-6">
-                <button id="tab-btn-text" class="py-3 px-4 text-base font-bold border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2">
+                <button id="tab-btn-text" class="py-3 px-4 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2">
                     <i class="fa-solid fa-align-left"></i> 批量文字輸入
                 </button>
-                <button id="tab-btn-file" class="py-3 px-4 text-base font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2 border-b-2 border-transparent">
+                <button id="tab-btn-file" class="py-3 px-4 text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2 border-b-2 border-transparent">
                     <i class="fa-solid fa-file-excel"></i> 匯入 Excel / CSV 檔
                 </button>
             </div>
@@ -294,21 +333,21 @@
             <div class="p-6 overflow-y-auto space-y-4">
                 <!-- 設定中心主題名稱區塊 -->
                 <div class="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl space-y-1">
-                    <label for="import-root-topic" class="block text-base font-bold text-indigo-900 flex items-center gap-1.5">
+                    <label for="import-root-topic" class="block text-xs font-bold text-indigo-900 flex items-center gap-1.5">
                         <i class="fa-solid fa-bullseye text-indigo-600"></i> 設定中心主題名稱：
                     </label>
-                    <input type="text" id="import-root-topic" placeholder="例如：臺灣地理、極端氣候、英語常見動詞..." class="w-full px-4 py-2.5 bg-white border border-indigo-200 rounded-lg text-base focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
+                    <input type="text" id="import-root-topic" placeholder="例如：臺灣地理、極端氣候、英語常見動詞..." class="w-full px-3 py-1.5 bg-white border border-indigo-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
                 </div>
 
                 <!-- Tab 1: Text Batch Input -->
                 <div id="tab-content-text" class="space-y-3">
-                    <label class="block text-base font-semibold text-slate-600">請貼上或輸入語詞（支援以換行、逗號 、 或分號分隔）：</label>
-                    <textarea id="import-text-input" rows="6" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-base focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none leading-relaxed" placeholder="例如：
+                    <label class="block text-xs font-semibold text-slate-600">請貼上或輸入語詞（支援以換行、逗號 、 或分號分隔）：</label>
+                    <textarea id="import-text-input" rows="6" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none leading-relaxed" placeholder="例如：
 氣候變遷
 溫室效應, 碳排放; 太陽能
 極端天氣
 永續發展"></textarea>
-                    <div class="flex items-center justify-between text-base text-slate-400">
+                    <div class="flex items-center justify-between text-xs text-slate-400">
                         <span>預估將解析語詞數量：<strong id="preview-word-count" class="text-indigo-600">0</strong> 個</span>
                         <button id="btn-clear-input" class="text-slate-400 hover:text-slate-600">清空文字</button>
                     </div>
@@ -318,27 +357,27 @@
                 <div id="tab-content-file" class="hidden space-y-4">
                     <div id="drop-zone" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 bg-slate-50 hover:bg-indigo-50/30 rounded-2xl p-8 text-center transition-all cursor-pointer">
                         <i class="fa-solid fa-cloud-arrow-up text-4xl text-indigo-500 mb-3"></i>
-                        <p class="text-base font-bold text-slate-700">點擊選擇檔案 或 將檔案拖拽至此處</p>
-                        <p class="text-sm text-slate-400 mt-1">支援 .xlsx, .xls, .csv 試算表格式</p>
+                        <p class="text-xs font-bold text-slate-700">點擊選擇檔案 或 將檔案拖拽至此處</p>
+                        <p class="text-[11px] text-slate-400 mt-1">支援 .xlsx, .xls, .csv 試算表格式</p>
                         <input type="file" id="file-input" accept=".xlsx, .xls, .csv" class="hidden">
                     </div>
                     <div id="file-info" class="hidden bg-indigo-50 border border-indigo-200 p-3 rounded-xl flex items-center justify-between">
                         <div class="flex items-center gap-3">
                             <i class="fa-solid fa-file-csv text-xl text-indigo-600"></i>
                             <div>
-                                <p id="file-name" class="text-base font-bold text-slate-800">filename.csv</p>
-                                <p id="file-size" class="text-sm text-slate-500">2.4 KB</p>
+                                <p id="file-name" class="text-xs font-bold text-slate-800">filename.csv</p>
+                                <p id="file-size" class="text-[10px] text-slate-500">2.4 KB</p>
                             </div>
                         </div>
-                        <button id="btn-remove-file" class="text-slate-400 hover:text-rose-500 text-base">刪除</button>
+                        <button id="btn-remove-file" class="text-slate-400 hover:text-rose-500 text-xs">刪除</button>
                     </div>
                 </div>
             </div>
 
             <!-- Modal Footer -->
             <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end space-x-3">
-                <button class="modal-close px-4 py-2 text-base font-medium text-slate-600 hover:bg-slate-200 rounded-xl transition-all">取消</button>
-                <button id="btn-confirm-import" class="px-5 py-2 text-base font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md shadow-indigo-200 transition-all flex items-center gap-1.5">
+                <button class="modal-close px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-200 rounded-xl transition-all">取消</button>
+                <button id="btn-confirm-import" class="px-5 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md shadow-indigo-200 transition-all flex items-center gap-1.5">
                     <i class="fa-solid fa-check"></i> 確認加入語詞庫
                 </button>
             </div>
@@ -349,21 +388,21 @@
     <div id="modal-help" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col">
             <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <h3 class="font-bold text-slate-800 text-xl flex items-center gap-2">
+                <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
                     <i class="fa-solid fa-circle-question text-indigo-500"></i> 操作與快捷指南
                 </h3>
                 <button class="modal-close text-slate-400 hover:text-slate-600 transition-all w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div class="p-6 space-y-4 text-base text-slate-600 leading-relaxed">
+            <div class="p-6 space-y-4 text-xs text-slate-600 leading-relaxed">
                 <div class="flex items-start gap-3">
                     <div class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 font-bold">1</div>
                     <p><strong>抓取與組合階層：</strong>由左側「語詞庫」將卡片拖拽至中央畫布。若將卡片拖至「現有節點上」放開，將自動設定為該節點的子階段！</p>
                 </div>
                 <div class="flex items-start gap-3">
                     <div class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 font-bold">2</div>
-                    <p><strong>畫布平移與縮放：</strong>iPad：單指拖曳空白處平移、雙指縮放；點一下語詞卡顯示工具列，連點兩下可編輯文字。電腦可用滑鼠滾輪縮放。</p>
+                    <p><strong>畫布平移與縮放：</strong>按住畫布空白處拖曳可平移視角；使用滑鼠滾輪可進行縮放。</p>
                 </div>
                 <div class="flex items-start gap-3">
                     <div class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 font-bold">3</div>
@@ -373,6 +412,18 @@
                     <div class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 font-bold">4</div>
                     <p><strong>自動放射狀排版：</strong>隨時點擊上方「自動排版」按鈕，系統將自動依據心智圖樹狀結構重新整齊排列。</p>
                 </div>
+                <div class="flex items-start gap-3">
+                    <div class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 font-bold">5</div>
+                    <p><strong>自由連線：</strong>按「連線」工具後，先點起點、再點終點。起點／終點可以是語詞卡，也可以是<b>另一條線上的任意位置</b>。一張語詞卡可連多條線。</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 font-bold">6</div>
+                    <p><strong>編輯線條：</strong>在「選取」模式點線條，會出現浮動工具列：設定起點／終點箭頭、顏色、虛線、對調方向、刪除（也可按 Delete 鍵）。</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 font-bold">7</div>
+                    <p><strong>手繪註記：</strong>「畫筆」按住拖曳手寫、「文字」點一下畫布加文字、「橡皮擦」點或拖過註記即可刪除。註記會跟著畫布平移與縮放。快捷：Esc 回到選取模式。</p>
+                </div>
             </div>
         </div>
     </div>
@@ -380,11 +431,11 @@
     <!-- 4. Quick Add Single Word Prompt Floating Modal -->
     <div id="modal-quick-add" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-slate-100 p-5 space-y-4">
-            <h4 class="font-bold text-lg text-slate-800">新增單個語詞</h4>
-            <input type="text" id="quick-word-input" placeholder="請輸入語詞名稱..." class="w-full px-3 py-2 border border-slate-200 rounded-xl text-base focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
+            <h4 class="font-bold text-sm text-slate-800">新增單個語詞</h4>
+            <input type="text" id="quick-word-input" placeholder="請輸入語詞名稱..." class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
             <div class="flex justify-end space-x-2">
-                <button class="modal-close px-4 py-2.5 text-base text-slate-500 hover:bg-slate-100 rounded-lg">取消</button>
-                <button id="btn-save-quick-word" class="px-4 py-1.5 text-base bg-indigo-600 text-white rounded-lg shadow-sm hover:bg-indigo-700">確定新增</button>
+                <button class="modal-close px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 rounded-lg">取消</button>
+                <button id="btn-save-quick-word" class="px-4 py-1.5 text-xs bg-indigo-600 text-white rounded-lg shadow-sm hover:bg-indigo-700">確定新增</button>
             </div>
         </div>
     </div>
@@ -408,24 +459,18 @@
 
         // Global State
         const state = {
-            unassignedWords: [], // List of { id, text }
-            nodes: [], // Array of Node Objects: { id, text, parentId, x, y, color, isRoot }
-            viewport: {
-                x: window.innerWidth / 2 - 100,
-                y: window.innerHeight / 2 - 40,
-                zoom: 1
-            },
-            dragState: {
-                isPanning: false,
-                startX: 0,
-                startY: 0,
-                draggedNodeId: null,
-                draggedWordItem: null,
-                nodeOffsetX: 0,
-                nodeOffsetY: 0,
-                potentialParentId: null
-            },
-            reparentingNodeId: null, // Node currently selecting new parent
+            unassignedWords: [],
+            nodes: [],        // { id, text, x, y, color, isRoot }
+            edges: [],        // { id, from, to, color, dash, startMarker, endMarker }  ref = {type:'node'|'edge', id, t?}
+            annotations: [],  // stroke: {id,kind:'stroke',pts,color,width} | text: {id,kind:'text',x,y,text,color,size}
+            sizes: {},        // measured node sizes
+            viewport: { x: 0, y: 0, zoom: 1 },
+            dragState: { isPanning: false, startX: 0, startY: 0, draggedNodeId: null, nodeOffsetX: 0, nodeOffsetY: 0 },
+            tool: 'select',   // select | connect | pen | text | erase
+            connect: null,    // { from: ref|null, sticky: bool }
+            selectedEdgeId: null,
+            pen: { color: '#ef4444', width: 4, drawing: null },
+            lastMouse: { x: 0, y: 0 },
             parsedFileWords: []
         };
 
@@ -437,7 +482,7 @@
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             const bgClass = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-slate-800';
-            toast.className = `${bgClass} text-white text-base px-4 py-2.5 rounded-xl shadow-lg transition-all duration-300 opacity-0 transform translate-y-2 flex items-center gap-2 pointer-events-auto`;
+            toast.className = `${bgClass} text-white text-xs px-4 py-2.5 rounded-xl shadow-lg transition-all duration-300 opacity-0 transform translate-y-2 flex items-center gap-2 pointer-events-auto`;
             toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> <span>${message}</span>`;
             
             $('#toast-container').appendChild(toast);
@@ -458,271 +503,310 @@
 
         /* ==================== INITIALIZATION & CANVAS CONTROLS ==================== */
         function initApp() {
-            // Setup Initial Clean Root Node
-            state.nodes = [{
-                id: 'root',
-                text: '中心主題',
-                parentId: null,
-                x: 0,
-                y: 0,
-                isRoot: true,
-                color: '#4f46e5'
-            }];
+            state.nodes = [{ id: 'root', text: '中心主題', x: 0, y: 0, isRoot: true, color: '#4f46e5' }];
+            state.edges = [];
+            state.annotations = [];
             state.unassignedWords = [];
+            $('#canvas-viewport').style.transformOrigin = '0 0';
+            centerViewport();
 
             renderWordBank();
             renderCanvas();
 
-            // Event Listeners Initialization
             setupCanvasPanAndZoom();
             setupDragAndDropEvents();
             setupUIControls();
+            setupToolUI();
 
-            // Window Resize Update
-            const box = $('#canvas-container');
-            centerOnRoot();
-            requestAnimationFrame(() => centerOnRoot());
-            window.addEventListener('load', () => { if (!state.userMoved) centerOnRoot(); });
-            let last = null;
-            new ResizeObserver(() => {
-                const r = canvasRect();
-                if (!state.userMoved) centerOnRoot();
-                else if (last) {
-                    state.viewport.x += (r.width - last.w) / 2;
-                    state.viewport.y += (r.height - last.h) / 2;
-                    updateViewportTransform();
-                }
-                last = { w: r.width, h: r.height };
-            }).observe(box);
+            window.addEventListener('resize', () => renderCanvas());
         }
 
-        Object.assign(state, { selectedNodeId: null, lastTap: { id: null, t: 0 }, userMoved: false });
-
-        function canvasRect() { return $('#canvas-container').getBoundingClientRect(); }
-
-        function updateViewportTransform() {
-            $('#canvas-viewport').style.transform = `translate(${state.viewport.x}px, ${state.viewport.y}px) scale(${state.viewport.zoom})`;
-            $('#zoom-indicator').innerText = `${Math.round(state.viewport.zoom * 100)}%`;
-        }
+        function containerRect() { return $('#canvas-container').getBoundingClientRect(); }
 
         function screenToCanvasPos(clientX, clientY) {
-            const r = canvasRect();
+            const r = containerRect();
             return {
                 x: (clientX - r.left - state.viewport.x) / state.viewport.zoom,
                 y: (clientY - r.top - state.viewport.y) / state.viewport.zoom
             };
         }
 
-        // 讓中心主題（節點中心）位於畫布可視區正中央
-        function centerOnRoot(resetZoom = false) {
-            const r = canvasRect();
-            const root = state.nodes.find(n => n.isRoot);
-            if (resetZoom) state.viewport.zoom = 1;
-            const z = state.viewport.zoom;
-            state.viewport.x = r.width / 2 - (root ? root.x : 0) * z;
-            state.viewport.y = r.height / 2 - (root ? root.y : 0) * z;
-            state.userMoved = false;
-            updateViewportTransform();
+        function canvasToContainerPos(p) {
+            return { x: state.viewport.x + p.x * state.viewport.zoom, y: state.viewport.y + p.y * state.viewport.zoom };
         }
 
-        function zoomAt(cx, cy, newZoom) {
-            const old = state.viewport.zoom;
-            newZoom = Math.min(Math.max(0.25, newZoom), 2.5);
-            state.viewport.x = cx - (cx - state.viewport.x) * (newZoom / old);
-            state.viewport.y = cy - (cy - state.viewport.y) * (newZoom / old);
-            state.viewport.zoom = newZoom;
-            state.userMoved = true;
-            updateViewportTransform();
+        function centerViewport() {
+            const r = containerRect();
+            state.viewport.x = r.width / 2 - 70;
+            state.viewport.y = r.height / 2 - 20;
+            state.viewport.zoom = 1;
         }
 
-        function zoomBy(f) {
-            const r = canvasRect();
-            zoomAt(r.width / 2, r.height / 2, state.viewport.zoom * f);
-        }
-
-        function isBackground(t) {
-            return t === $('#canvas-container') || t.id === 'canvas-viewport' || t.id === 'svg-layer' || t.id === 'nodes-container' || t.tagName === 'svg';
-        }
-
-        function selectNode(id) {
-            state.selectedNodeId = id;
-            $$('.mm-node').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
+        function updateViewportTransform() {
+            const viewportEl = $('#canvas-viewport');
+            viewportEl.style.transform = `translate(${state.viewport.x}px, ${state.viewport.y}px) scale(${state.viewport.zoom})`;
+            $('#zoom-indicator').innerText = `${Math.round(state.viewport.zoom * 100)}%`;
+            updateEdgeToolbar();
         }
 
         function setupCanvasPanAndZoom() {
-            const box = $('#canvas-container');
-            const ptrs = new Map();
-            let pan = null, pinch = null;
-            const rel = (e) => { const r = canvasRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+            const cc = $('#canvas-container');
 
-            const startPan = () => {
-                const p = [...ptrs.values()][0];
-                pan = { sx: p.x - state.viewport.x, sy: p.y - state.viewport.y };
-                pinch = null;
-            };
-            const startPinch = () => {
-                const [a, b] = [...ptrs.values()];
-                const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-                pinch = {
-                    d: Math.hypot(a.x - b.x, a.y - b.y) || 1,
-                    z: state.viewport.zoom,
-                    fx: (mx - state.viewport.x) / state.viewport.zoom,
-                    fy: (my - state.viewport.y) / state.viewport.zoom
-                };
-                pan = null;
-            };
-
-            box.addEventListener('pointerdown', (e) => {
-                if (!isBackground(e.target)) return;
-                if (state.reparentingNodeId) {
-                    const root = state.nodes.find(n => n.isRoot);
-                    if (root) setParentNode(state.reparentingNodeId, root.id);
-                    cancelReparenting();
+            cc.addEventListener('mousedown', (e) => {
+                if (e.target.closest('.canvas-ui')) return;
+                const bg = e.target === cc || e.target.tagName === 'svg' || e.target.id === 'canvas-viewport';
+                if (state.tool === 'pen') { startStroke(e); return; }
+                if (state.tool === 'text') { addTextNote(e); return; }
+                if (state.tool === 'erase') return;
+                if (state.tool === 'connect') {
+                    if (bg && state.connect && state.connect.from) { state.connect.from = null; updateConnectHint(); renderCanvas(); }
                     return;
                 }
-                selectNode(null);
-                ptrs.set(e.pointerId, rel(e));
-                try { box.setPointerCapture(e.pointerId); } catch (_) {}
-                if (ptrs.size >= 2) startPinch(); else startPan();
-            });
-
-            box.addEventListener('pointermove', (e) => {
-                if (!ptrs.has(e.pointerId)) return;
-                ptrs.set(e.pointerId, rel(e));
-                state.userMoved = true;
-                if (pinch && ptrs.size >= 2) {
-                    const [a, b] = [...ptrs.values()];
-                    const nz = Math.min(Math.max(0.25, pinch.z * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d), 2.5);
-                    state.viewport.zoom = nz;
-                    state.viewport.x = (a.x + b.x) / 2 - pinch.fx * nz;
-                    state.viewport.y = (a.y + b.y) / 2 - pinch.fy * nz;
-                } else if (pan) {
-                    const p = ptrs.get(e.pointerId);
-                    state.viewport.x = p.x - pan.sx;
-                    state.viewport.y = p.y - pan.sy;
+                if (bg) {
+                    if (state.selectedEdgeId) selectEdge(null);
+                    state.dragState.isPanning = true;
+                    state.dragState.startX = e.clientX - state.viewport.x;
+                    state.dragState.startY = e.clientY - state.viewport.y;
+                    cc.style.cursor = 'grabbing';
                 }
-                updateViewportTransform();
             });
 
-            const endPtr = (e) => {
-                if (!ptrs.delete(e.pointerId)) return;
-                if (ptrs.size >= 2) startPinch();
-                else if (ptrs.size === 1) startPan();
-                else { pan = null; pinch = null; }
-            };
-            box.addEventListener('pointerup', endPtr);
-            box.addEventListener('pointercancel', endPtr);
-
-            box.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                const p = rel(e);
-                zoomAt(p.x, p.y, state.viewport.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
-            }, { passive: false });
-
-            // 拖曳語詞卡（滑鼠 / 手指 / Apple Pencil 皆可）
-            window.addEventListener('pointermove', (e) => {
-                const d = state.dragState;
-                if (!d.draggedNodeId || e.pointerId !== d.pointerId) return;
-                if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 6) return;
-                d.moved = true;
-                state.userMoved = true;
-                const node = state.nodes.find(n => n.id === d.draggedNodeId);
-                if (!node) return;
-                const pos = screenToCanvasPos(e.clientX, e.clientY);
-                node.x = pos.x - d.nodeOffsetX;
-                node.y = pos.y - d.nodeOffsetY;
-                const el = $('#node-' + node.id);
-                if (el) el.style.transform = nodeTransform(node);
-                renderSVGConnections();
-            });
-
-            const endDrag = (e) => {
-                const d = state.dragState;
-                if (!d.draggedNodeId || e.pointerId !== d.pointerId) return;
-                const id = d.draggedNodeId;
-                d.draggedNodeId = null;
-                if (!d.moved && e.type === 'pointerup') {
-                    const now = Date.now();
-                    selectNode(id);
-                    if (state.lastTap.id === id && now - state.lastTap.t < 400) {
-                        state.lastTap = { id: null, t: 0 };
-                        const n = state.nodes.find(x => x.id === id);
-                        if (n) editNodeText(n);
-                    } else {
-                        state.lastTap = { id, t: now };
+            window.addEventListener('mousemove', (e) => {
+                state.lastMouse = { x: e.clientX, y: e.clientY };
+                const ds = state.dragState;
+                if (ds.isPanning) {
+                    state.viewport.x = e.clientX - ds.startX;
+                    state.viewport.y = e.clientY - ds.startY;
+                    updateViewportTransform();
+                } else if (ds.draggedNodeId) {
+                    const pos = screenToCanvasPos(e.clientX, e.clientY);
+                    const node = state.nodes.find(n => n.id === ds.draggedNodeId);
+                    if (node) {
+                        node.x = pos.x - ds.nodeOffsetX;
+                        node.y = pos.y - ds.nodeOffsetY;
+                        renderCanvas();
                     }
+                } else if (state.pen.drawing) {
+                    extendStroke(e);
                 }
+                if (state.tool === 'connect' && state.connect && state.connect.from) renderPreview(e);
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (state.dragState.isPanning) {
+                    state.dragState.isPanning = false;
+                    cc.style.cursor = '';
+                }
+                if (state.dragState.draggedNodeId) {
+                    state.dragState.draggedNodeId = null;
+                    renderCanvas();
+                }
+                if (state.pen.drawing) endStroke();
+            });
+
+            cc.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const r = containerRect();
+                const oldZoom = state.viewport.zoom;
+                let newZoom = e.deltaY < 0 ? oldZoom * 1.1 : oldZoom / 1.1;
+                newZoom = Math.min(Math.max(0.25, newZoom), 2.5);
+                const mx = e.clientX - r.left, my = e.clientY - r.top;
+                state.viewport.x = mx - (mx - state.viewport.x) * (newZoom / oldZoom);
+                state.viewport.y = my - (my - state.viewport.y) * (newZoom / oldZoom);
+                state.viewport.zoom = newZoom;
+                updateViewportTransform();
+            }, { passive: false });
+        }
+
+        /* ---------- Edge geometry (edges can attach to nodes OR to points on other edges) ---------- */
+        function nodeSize(n) { return state.sizes[n.id] || { w: 140, h: 40 }; }
+
+        function bez(g, t) {
+            const u = 1 - t;
+            return {
+                x: u*u*u*g.A.x + 3*u*u*t*g.c1.x + 3*u*t*t*g.c2.x + t*t*t*g.B.x,
+                y: u*u*u*g.A.y + 3*u*u*t*g.c1.y + 3*u*t*t*g.c2.y + t*t*t*g.B.y
             };
-            window.addEventListener('pointerup', endDrag);
-            window.addEventListener('pointercancel', endDrag);
+        }
+
+        function closestT(g, p) {
+            let best = 0.5, bd = Infinity;
+            for (let i = 0; i <= 80; i++) {
+                const t = i / 80, q = bez(g, t);
+                const d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2;
+                if (d < bd) { bd = d; best = t; }
+            }
+            return best;
+        }
+
+        function refCenter(ref, memo, depth) {
+            if (depth > 8) return null;
+            if (ref.type === 'node') {
+                const n = state.nodes.find(x => x.id === ref.id);
+                if (!n) return null;
+                const s = nodeSize(n);
+                return { x: n.x + s.w / 2, y: n.y + s.h / 2, w: s.w, h: s.h };
+            }
+            const g = edgeGeom(ref.id, memo, depth + 1);
+            if (!g) return null;
+            const p = bez(g, ref.t == null ? 0.5 : ref.t);
+            return { x: p.x, y: p.y, w: 0, h: 0 };
+        }
+
+        function edgeGeom(id, memo, depth) {
+            if (memo[id] !== undefined) return memo[id];
+            const e = state.edges.find(x => x.id === id);
+            if (!e || depth > 8) return (memo[id] = null);
+            const a = refCenter(e.from, memo, depth), b = refCenter(e.to, memo, depth);
+            if (!a || !b) return (memo[id] = null);
+            const dx = b.x - a.x, dy = b.y - a.y;
+            let A, B, c1, c2;
+            if (Math.abs(dx) >= Math.abs(dy)) {
+                const sx = dx >= 0 ? 1 : -1;
+                A = { x: a.x + sx * a.w / 2, y: a.y };
+                B = { x: b.x - sx * b.w / 2, y: b.y };
+                const h = (B.x - A.x) * 0.5;
+                c1 = { x: A.x + h, y: A.y }; c2 = { x: B.x - h, y: B.y };
+            } else {
+                const sy = dy >= 0 ? 1 : -1;
+                A = { x: a.x, y: a.y + sy * a.h / 2 };
+                B = { x: b.x, y: b.y - sy * b.h / 2 };
+                const h = (B.y - A.y) * 0.5;
+                c1 = { x: A.x, y: A.y + h }; c2 = { x: B.x, y: B.y - h };
+            }
+            return (memo[id] = { A, B, c1, c2 });
+        }
+
+        function markerSvg(type, x, y, ang, color) {
+            let shape = '';
+            if (type === 'triangle') shape = `<path d="M-13,-6.5 L0,0 L-13,6.5 Z" fill="${color}"/>`;
+            else if (type === 'open') shape = `<path d="M-12,-7 L0,0 L-12,7" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+            else if (type === 'dot') shape = `<circle cx="-4" cy="0" r="4.5" fill="${color}"/>`;
+            else if (type === 'diamond') shape = `<path d="M-15,0 L-7.5,-5.5 L0,0 L-7.5,5.5 Z" fill="${color}"/>`;
+            else return '';
+            return `<g transform="translate(${x} ${y}) rotate(${ang})">${shape}</g>`;
+        }
+
+        function angleOf(p, q, other) {
+            let vx = p.x - q.x, vy = p.y - q.y;
+            if (Math.hypot(vx, vy) < 0.01) { vx = p.x - other.x; vy = p.y - other.y; }
+            return Math.atan2(vy, vx) * 180 / Math.PI;
+        }
+
+        function edgeSvgString(e, g, forExport) {
+            const col = e.color || '#6366f1';
+            const d = `M ${g.A.x} ${g.A.y} C ${g.c1.x} ${g.c1.y}, ${g.c2.x} ${g.c2.y}, ${g.B.x} ${g.B.y}`;
+            let out = '';
+            if (!forExport && state.selectedEdgeId === e.id) {
+                out += `<path d="${d}" fill="none" stroke="#f59e0b" stroke-width="9" opacity="0.35" stroke-linecap="round"/>`;
+            }
+            out += `<path d="${d}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linecap="round" ${e.dash ? 'stroke-dasharray="8 6"' : ''} opacity="0.9"/>`;
+            const sm = e.startMarker || 'none', em = e.endMarker || 'none';
+            out += markerSvg(sm, g.A.x, g.A.y, angleOf(g.A, g.c1, g.B), col);
+            out += markerSvg(em, g.B.x, g.B.y, angleOf(g.B, g.c2, g.A), col);
+            // anchor dots where a line ends on another line
+            if (e.from.type === 'edge' && sm === 'none') out += `<circle cx="${g.A.x}" cy="${g.A.y}" r="4" fill="${col}"/>`;
+            if (e.to.type === 'edge' && em === 'none') out += `<circle cx="${g.B.x}" cy="${g.B.y}" r="4" fill="${col}"/>`;
+            if (!forExport) {
+                out += `<path class="edge-hit" data-edge="${e.id}" d="${d}" fill="none" stroke="transparent" stroke-width="16" style="pointer-events:stroke;cursor:pointer"/>`;
+            }
+            return out;
         }
 
         /* ==================== RENDERING ENGINE ==================== */
         function renderCanvas() {
-            updateViewportTransform();
-            renderSVGConnections();
             renderHTMLNodes();
+            renderSVGConnections();
+            renderAnnotations();
+            if (!(state.connect && state.connect.from)) { const pv = $('#svg-preview'); if (pv) pv.innerHTML = ''; }
+            updateViewportTransform();
         }
 
-        // Render Smooth SVG Curved Connections between Parent and Child Nodes
         function renderSVGConnections() {
-            const svgGroup = $('#svg-connections');
-            if (!svgGroup) return;
-            svgGroup.innerHTML = '';
-
-            // Draw connections between nodes and their parents
-            state.nodes.forEach(node => {
-                if (!node.parentId) return;
-                const parent = state.nodes.find(n => n.id === node.parentId);
-                if (!parent) return;
-
-                // Center coordinates of nodes for smooth connection curves
-                const pX = parent.x;
-                const pY = parent.y;
-                const cX = node.x;
-                const cY = node.y;
-
-                const dx = cX - pX;
-
-                // Bezier curve calculation
-                const pathData = `M ${pX} ${pY} C ${pX + dx * 0.5} ${pY}, ${pX + dx * 0.5} ${cY}, ${cX} ${cY}`;
-
-                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                path.setAttribute('d', pathData);
-                path.setAttribute('fill', 'none');
-                path.setAttribute('stroke', node.color || '#6366f1');
-                path.setAttribute('stroke-width', node.isRoot ? '3' : '2.5');
-                path.setAttribute('stroke-linecap', 'round');
-                path.setAttribute('opacity', '0.85');
-
-                svgGroup.appendChild(path);
+            const grp = $('#svg-connections');
+            if (!grp) return;
+            const memo = {};
+            let html = '';
+            state.edges.forEach(e => {
+                const g = edgeGeom(e.id, memo, 0);
+                if (g) html += edgeSvgString(e, g, false);
             });
+            grp.innerHTML = html;
+            grp.querySelectorAll('.edge-hit').forEach(el => {
+                el.addEventListener('mousedown', ev => onEdgeMouseDown(ev, el.dataset.edge));
+            });
+        }
 
-            // Draw dynamic preview line when dragging node near potential parent
-            if (state.dragState.draggedNodeId && state.dragState.potentialParentId) {
-                const draggedNode = state.nodes.find(n => n.id === state.dragState.draggedNodeId);
-                const targetParent = state.nodes.find(n => n.id === state.dragState.potentialParentId);
-
-                if (draggedNode && targetParent) {
-                    const pX = targetParent.x;
-                    const pY = targetParent.y;
-                    const cX = draggedNode.x;
-                    const cY = draggedNode.y;
-                    const dx = cX - pX;
-
-                    const pathData = `M ${pX} ${pY} C ${pX + dx * 0.5} ${pY}, ${pX + dx * 0.5} ${cY}, ${cX} ${cY}`;
-
-                    const previewPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                    previewPath.setAttribute('d', pathData);
-                    previewPath.setAttribute('fill', 'none');
-                    previewPath.setAttribute('stroke', '#10b981');
-                    previewPath.setAttribute('stroke-width', '3.5');
-                    previewPath.setAttribute('stroke-dasharray', '6 4');
-                    previewPath.setAttribute('stroke-linecap', 'round');
-
-                    svgGroup.appendChild(previewPath);
-                }
+        function strokeD(pts) {
+            if (pts.length < 3) return 'M ' + pts.map(p => `${p.x} ${p.y}`).join(' L ');
+            let d = `M ${pts[0].x} ${pts[0].y}`;
+            for (let i = 1; i < pts.length - 1; i++) {
+                const mx = (pts[i].x + pts[i + 1].x) / 2, my = (pts[i].y + pts[i + 1].y) / 2;
+                d += ` Q ${pts[i].x} ${pts[i].y} ${mx} ${my}`;
             }
+            const l = pts[pts.length - 1];
+            return d + ` L ${l.x} ${l.y}`;
+        }
+
+        function annotationSvg(a, erase) {
+            if (a.kind === 'stroke') {
+                const d = strokeD(a.pts);
+                let o = `<path d="${d}" fill="none" stroke="${a.color}" stroke-width="${a.width}" stroke-linecap="round" stroke-linejoin="round"/>`;
+                if (erase) o += `<path data-ann="${a.id}" d="${d}" fill="none" stroke="transparent" stroke-width="${a.width + 14}" stroke-linecap="round" style="pointer-events:stroke;cursor:cell"/>`;
+                return o;
+            }
+            return `<text x="${a.x}" y="${a.y}" fill="${a.color}" font-size="${a.size}" font-weight="600" font-family="sans-serif" ${erase ? `data-ann="${a.id}" style="pointer-events:all;cursor:cell"` : ''}>${escapeXml(a.text)}</text>`;
+        }
+
+        function renderAnnotations() {
+            const grp = $('#svg-annotations');
+            if (!grp) return;
+            const erase = state.tool === 'erase';
+            grp.innerHTML = state.annotations.map(a => annotationSvg(a, erase)).join('');
+            if (erase) {
+                grp.querySelectorAll('[data-ann]').forEach(el => {
+                    const h = (ev) => {
+                        if (ev.type === 'mousedown' || ev.buttons === 1) { ev.stopPropagation(); removeAnnotation(el.dataset.ann); }
+                    };
+                    el.addEventListener('mousedown', h);
+                    el.addEventListener('mouseenter', h);
+                });
+            }
+        }
+
+        function removeAnnotation(id) {
+            state.annotations = state.annotations.filter(a => a.id !== id);
+            renderAnnotations();
+        }
+
+        /* ---------- Freehand annotation ---------- */
+        function startStroke(e) {
+            const p = screenToCanvasPos(e.clientX, e.clientY);
+            const a = { id: generateId(), kind: 'stroke', pts: [p], color: state.pen.color, width: state.pen.width };
+            state.annotations.push(a);
+            state.pen.drawing = a;
+            renderAnnotations();
+        }
+        function extendStroke(e) {
+            const a = state.pen.drawing;
+            const p = screenToCanvasPos(e.clientX, e.clientY);
+            const l = a.pts[a.pts.length - 1];
+            if (Math.hypot(p.x - l.x, p.y - l.y) * state.viewport.zoom < 2) return;
+            a.pts.push(p);
+            renderAnnotations();
+        }
+        function endStroke() {
+            const a = state.pen.drawing;
+            if (a && a.pts.length === 1) a.pts.push({ x: a.pts[0].x + 0.1, y: a.pts[0].y });
+            state.pen.drawing = null;
+            renderAnnotations();
+        }
+        function addTextNote(e) {
+            const t = prompt('請輸入註記文字：');
+            if (!t || !t.trim()) return;
+            const p = screenToCanvasPos(e.clientX, e.clientY);
+            state.annotations.push({ id: generateId(), kind: 'text', x: p.x, y: p.y, text: t.trim(), color: state.pen.color, size: 18 });
+            renderAnnotations();
         }
 
         // Render Word Bank Cards List
@@ -742,15 +826,15 @@
                 if (emptyState) emptyState.classList.add('hidden');
                 state.unassignedWords.forEach(item => {
                     const card = document.createElement('div');
-                    card.className = 'bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center justify-between cursor-grab hover:border-indigo-400 hover:shadow-xs transition-all group pointer-events-auto';
+                    card.className = 'bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between cursor-grab hover:border-indigo-400 hover:shadow-xs transition-all group pointer-events-auto';
                     card.draggable = true;
                     card.innerHTML = `
-                        <span class="text-base font-medium text-slate-700 truncate">${escapeHtml(item.text)}</span>
+                        <span class="text-xs font-medium text-slate-700 truncate">${escapeHtml(item.text)}</span>
                         <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100">
-                            <button title="加至畫布" class="btn-add-to-canvas text-indigo-600 hover:text-indigo-800 text-base px-3 py-2.5 hover:bg-indigo-50 rounded">
+                            <button title="加至畫布" class="btn-add-to-canvas text-indigo-600 hover:text-indigo-800 text-xs px-1.5 py-1 hover:bg-indigo-50 rounded">
                                 <i class="fa-solid fa-plus"></i>
                             </button>
-                            <button title="刪除語詞" class="btn-remove-word text-slate-400 hover:text-rose-600 text-base px-3 py-2.5 hover:bg-rose-50 rounded">
+                            <button title="刪除語詞" class="btn-remove-word text-slate-400 hover:text-rose-600 text-xs px-1.5 py-1 hover:bg-rose-50 rounded">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </div>
@@ -780,6 +864,14 @@
             }
         }
 
+        function makeEdge(from, to, color) {
+            return { id: generateId(), from, to, color: color || '#64748b', dash: false, startMarker: 'none', endMarker: 'none' };
+        }
+
+        function childCount(parentId) {
+            return state.edges.filter(e => e.from.type === 'node' && e.from.id === parentId && e.to.type === 'node').length;
+        }
+
         function addWordToCanvas(item, parentId = null) {
             state.unassignedWords = state.unassignedWords.filter(w => w.id !== item.id);
 
@@ -788,39 +880,26 @@
                 const rootNode = state.nodes.find(n => n.isRoot);
                 actualParentId = rootNode ? rootNode.id : null;
             }
-
             const parentNode = state.nodes.find(n => n.id === actualParentId);
 
             let x = 0, y = 0;
             if (parentNode) {
-                const siblingCount = state.nodes.filter(n => n.parentId === actualParentId).length;
-                const offsetAngle = (siblingCount * 0.75) - 0.5;
-                const dist = parentNode.isRoot ? 300 : 220;
+                const siblingCount = childCount(actualParentId);
+                const offsetAngle = (siblingCount * 0.6) - 0.5;
+                const dist = parentNode.isRoot ? 170 : 130;
                 x = parentNode.x + Math.cos(offsetAngle) * dist;
                 y = parentNode.y + Math.sin(offsetAngle) * dist;
             }
 
             let color = '#6366f1';
             if (parentNode) {
-                if (parentNode.isRoot) {
-                    const rootSiblings = state.nodes.filter(n => n.parentId === parentNode.id).length;
-                    color = BRANCH_COLORS[rootSiblings % BRANCH_COLORS.length];
-                } else {
-                    color = parentNode.color;
-                }
+                color = parentNode.isRoot ? BRANCH_COLORS[childCount(parentNode.id) % BRANCH_COLORS.length] : parentNode.color;
             }
 
-            const newNode = {
-                id: item.id || generateId(),
-                text: item.text,
-                parentId: actualParentId,
-                x: x,
-                y: y,
-                isRoot: false,
-                color: color
-            };
-
+            const newNode = { id: item.id || generateId(), text: item.text, x, y, isRoot: false, color };
             state.nodes.push(newNode);
+            if (parentNode) state.edges.push(makeEdge({ type: 'node', id: parentNode.id }, { type: 'node', id: newNode.id }, color));
+
             renderWordBank();
             renderCanvas();
             showToast(`已新增「${item.text}」至畫布`, 'success');
@@ -845,12 +924,16 @@
             const node = state.nodes.find(n => n.id === nodeId);
             if (!node || node.isRoot) return;
 
-            const children = state.nodes.filter(n => n.parentId === nodeId);
-            children.forEach(c => {
-                c.parentId = node.parentId;
-            });
+            const isN = (r) => r.type === 'node' && r.id === nodeId;
+            const ins = state.edges.filter(e => isN(e.to) && e.from.type === 'node');
+            const outs = state.edges.filter(e => isN(e.from) && e.to.type === 'node');
+            const reconnect = ins.length === 1 ? outs.map(o => makeEdge(ins[0].from, o.to, o.color)) : [];
+
+            state.edges.filter(e => isN(e.from) || isN(e.to)).map(e => e.id).forEach(id => removeEdgeCascade(id));
+            state.edges.push(...reconnect);
 
             state.nodes = state.nodes.filter(n => n.id !== nodeId);
+            delete state.sizes[nodeId];
             state.unassignedWords.push({ id: node.id, text: node.text });
 
             renderWordBank();
@@ -858,340 +941,381 @@
             showToast(`已將「${node.text}」回收至語詞庫`);
         };
 
-        function getDepth(node) {
-            let depth = 0;
-            let current = node;
-            while (current && current.parentId) {
-                depth++;
-                current = state.nodes.find(n => n.id === current.parentId);
-            }
-            return depth;
-        }
-
-        function isDescendant(nodeId, potentialParentId) {
-            let current = state.nodes.find(n => n.id === potentialParentId);
-            while (current) {
-                if (current.id === nodeId) return true;
-                current = state.nodes.find(n => n.id === current.parentId);
-            }
-            return false;
-        }
-
-        function detectPotentialParentNode(draggedNode) {
-            state.dragState.potentialParentId = null;
-            const threshold = 110;
-
-            for (let other of state.nodes) {
-                if (other.id === draggedNode.id) continue;
-                if (isDescendant(draggedNode.id, other.id)) continue;
-
-                const dx = (draggedNode.x + 60) - (other.x + 60);
-                const dy = (draggedNode.y) - (other.y);
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                if (dist < threshold) {
-                    state.dragState.potentialParentId = other.id;
-                    break;
-                }
-            }
-        }
-
         function setupDragAndDropEvents() {
-            const canvasContainer = $('#canvas-container');
-            if (!canvasContainer) return;
-
-            canvasContainer.addEventListener('dragover', (e) => {
-                e.preventDefault();
-            });
-
-            canvasContainer.addEventListener('drop', (e) => {
+            const cc = $('#canvas-container');
+            if (!cc) return;
+            cc.addEventListener('dragover', (e) => e.preventDefault());
+            cc.addEventListener('drop', (e) => {
                 e.preventDefault();
                 const wordData = e.dataTransfer.getData('text/plain');
-                if (wordData) {
-                    try {
-                        const item = JSON.parse(wordData);
-                        const pos = screenToCanvasPos(e.clientX, e.clientY);
-                        state.unassignedWords = state.unassignedWords.filter(w => w.id !== item.id);
-                        const rootNode = state.nodes.find(n => n.isRoot);
-                        const newNode = {
-                            id: item.id || generateId(),
-                            text: item.text,
-                            parentId: rootNode ? rootNode.id : null,
-                            x: pos.x,
-                            y: pos.y,
-                            isRoot: false,
-                            color: BRANCH_COLORS[state.nodes.length % BRANCH_COLORS.length]
-                        };
-                        state.nodes.push(newNode);
-                        renderWordBank();
-                        renderCanvas();
-                        showToast(`已新增「${item.text}」至畫布`, 'success');
-                    } catch (err) {
-                        console.error(err);
-                    }
-                }
+                if (!wordData) return;
+                try {
+                    const item = JSON.parse(wordData);
+                    const pos = screenToCanvasPos(e.clientX, e.clientY);
+                    state.unassignedWords = state.unassignedWords.filter(w => w.id !== item.id);
+                    const rootNode = state.nodes.find(n => n.isRoot);
+                    const color = BRANCH_COLORS[state.nodes.length % BRANCH_COLORS.length];
+                    const newNode = { id: item.id || generateId(), text: item.text, x: pos.x - 60, y: pos.y - 20, isRoot: false, color };
+                    state.nodes.push(newNode);
+                    if (rootNode) state.edges.push(makeEdge({ type: 'node', id: rootNode.id }, { type: 'node', id: newNode.id }, color));
+                    renderWordBank();
+                    renderCanvas();
+                    showToast(`已新增「${item.text}」至畫布`, 'success');
+                } catch (err) { console.error(err); }
             });
         }
 
         // Render HTML Interactive Nodes
-        function nodeTransform(node) {
-            return `translate(${node.x}px, ${node.y}px) translate(-50%, -50%)`;
-        }
-
         function renderHTMLNodes() {
             const container = $('#nodes-container');
             container.innerHTML = '';
-            const isReparenting = !!state.reparentingNodeId;
-            const tb = 'w-11 h-11 flex items-center justify-center text-lg text-slate-500 hover:text-indigo-600 rounded-lg';
+            const src = state.connect && state.connect.from && state.connect.from.type === 'node' ? state.connect.from.id : null;
 
             state.nodes.forEach(node => {
-                const nodeEl = document.createElement('div');
-                const isBeingReparented = state.reparentingNodeId === node.id;
-                const isCandidate = isReparenting && !isBeingReparented && !isDescendant(node.id, state.reparentingNodeId);
+                const el = document.createElement('div');
+                el.id = `node-${node.id}`;
+                el.className = `node-el group absolute pointer-events-auto rounded-xl shadow-md border bg-white px-4 py-2.5 min-w-[120px] max-w-[220px] cursor-move flex flex-col justify-center${src === node.id ? ' ring-4 ring-emerald-400 z-30' : ''}`;
 
-                nodeEl.id = `node-${node.id}`;
-                nodeEl.dataset.id = node.id;
-
-                let extra = '';
-                if (isBeingReparented) extra += ' ring-4 ring-amber-400 border-amber-500 z-30';
-                if (isCandidate) extra += ' reparent-candidate z-30';
-                if (state.selectedNodeId === node.id) extra += ' selected';
-
-                nodeEl.className = `mm-node group absolute pointer-events-auto rounded-2xl shadow-md border bg-white px-5 py-3 min-w-[140px] max-w-[300px] cursor-move flex flex-col justify-center ${extra}`;
                 if (node.isRoot) {
-                    nodeEl.className += ' bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold border-indigo-700 shadow-indigo-200';
+                    el.className += ' bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-sm border-indigo-700 shadow-indigo-200';
                 } else {
-                    nodeEl.style.borderColor = node.color || '#cbd5e1';
-                    nodeEl.style.borderLeftWidth = '8px';
+                    el.style.borderColor = node.color || '#cbd5e1';
+                    el.style.borderLeftWidth = '6px';
                 }
-                nodeEl.style.transform = nodeTransform(node);
+                el.style.transform = `translate(${node.x}px, ${node.y}px)`;
 
-                let badge = '';
-                if (isCandidate) {
-                    badge = `<span class="text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 mt-1 self-start pointer-events-none">點擊設為父節點</span>`;
-                } else if (isBeingReparented) {
-                    badge = `<span class="text-sm font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 mt-1 self-start pointer-events-none">選擇新父節點中...</span>`;
-                }
-
-                nodeEl.innerHTML = `
-                    <span class="leading-snug break-words ${node.isRoot ? 'text-2xl font-bold text-white' : 'text-xl font-medium text-slate-800'}">${escapeHtml(node.text)}</span>
-                    ${badge}
-                    <div class="node-actions absolute left-1/2 top-full pt-2" style="transform:translateX(-50%)">
-                        <div class="flex items-center gap-1 bg-white border border-slate-200 rounded-xl shadow-lg p-1 w-max">
-                            ${!node.isRoot ? `
-                            <button onclick="startReparenting('${node.id}', event)" title="變更階層 / 重新連線" class="${tb}"><i class="fa-solid fa-link"></i></button>
-                            <button onclick="detachToRoot('${node.id}', event)" title="移至中心主題第一層" class="${tb}"><i class="fa-solid fa-turn-up"></i></button>` : ''}
-                            <button onclick="editNodeById('${node.id}')" title="編輯主題文字" class="${tb}"><i class="fa-solid fa-pen"></i></button>
-                            ${!node.isRoot ? `<button onclick="deleteNode('${node.id}')" title="解綁回語詞庫" class="${tb} hover:!text-rose-500"><i class="fa-solid fa-xmark"></i></button>` : ''}
+                el.innerHTML = `
+                    <span class="font-medium text-xs truncate ${node.isRoot ? 'text-white font-bold text-sm' : 'text-slate-800'}">${escapeHtml(node.text)}</span>
+                    <div class="node-actions hidden group-hover:flex absolute -top-9 right-0 pb-2 z-40">
+                        <div class="flex items-center gap-1 bg-white border border-slate-200 rounded-lg shadow-md px-1.5 py-1">
+                            <button onclick="startConnect('${node.id}', event)" title="從此語詞卡建立連線" class="text-slate-500 hover:text-emerald-600 text-xs px-1"><i class="fa-solid fa-link"></i></button>
+                            <button onclick="editNodeById('${node.id}')" title="編輯主題文字" class="text-slate-500 hover:text-indigo-600 text-xs px-1"><i class="fa-solid fa-pen"></i></button>
+                            ${!node.isRoot ? `<button onclick="deleteNode('${node.id}')" title="解綁回語詞庫" class="text-slate-500 hover:text-rose-500 text-xs px-1"><i class="fa-solid fa-xmark"></i></button>` : ''}
                         </div>
                     </div>
                 `;
 
-                nodeEl.addEventListener('click', (e) => {
+                el.addEventListener('mousedown', (e) => {
                     if (e.target.closest('button')) return;
-                    if (state.reparentingNodeId) {
-                        e.stopPropagation();
-                        if (isCandidate) {
-                            setParentNode(state.reparentingNodeId, node.id);
-                            cancelReparenting();
-                        } else if (isBeingReparented) {
-                            cancelReparenting();
-                        }
+                    e.stopPropagation();
+                    if (state.tool === 'connect') {
+                        e.preventDefault();
+                        pickConnectTarget({ type: 'node', id: node.id });
+                        return;
                     }
+                    if (state.tool !== 'select') return;
+                    state.dragState.draggedNodeId = node.id;
+                    const pos = screenToCanvasPos(e.clientX, e.clientY);
+                    state.dragState.nodeOffsetX = pos.x - node.x;
+                    state.dragState.nodeOffsetY = pos.y - node.y;
                 });
 
-                nodeEl.addEventListener('pointerdown', (e) => {
-                    if (e.target.closest('button') || state.reparentingNodeId) return;
+                el.addEventListener('dblclick', (e) => { e.stopPropagation(); editNodeText(node); });
+
+                // Drop receiver for words dragged from the word bank
+                el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('drop-target-active'); });
+                el.addEventListener('dragleave', () => el.classList.remove('drop-target-active'));
+                el.addEventListener('drop', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    const pos = screenToCanvasPos(e.clientX, e.clientY);
-                    Object.assign(state.dragState, {
-                        draggedNodeId: node.id, pointerId: e.pointerId, moved: false,
-                        sx: e.clientX, sy: e.clientY,
-                        nodeOffsetX: pos.x - node.x, nodeOffsetY: pos.y - node.y
-                    });
-                    try { nodeEl.setPointerCapture(e.pointerId); } catch (_) {}
-                });
-
-                nodeEl.addEventListener('dragover', (e) => { e.preventDefault(); nodeEl.classList.add('drop-target-active'); });
-                nodeEl.addEventListener('dragleave', () => nodeEl.classList.remove('drop-target-active'));
-                nodeEl.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    nodeEl.classList.remove('drop-target-active');
+                    el.classList.remove('drop-target-active');
                     const wordData = e.dataTransfer.getData('text/plain');
                     if (wordData) {
                         try { addWordToCanvas(JSON.parse(wordData), node.id); } catch (err) { console.error(err); }
                     }
                 });
 
-                container.appendChild(nodeEl);
+                container.appendChild(el);
+                state.sizes[node.id] = { w: el.offsetWidth, h: el.offsetHeight };
             });
         }
 
-        /* ==================== RE-PARENTING / HIERARCHY FUNCTIONS ==================== */
-        window.startReparenting = function(nodeId, event) {
-            if (event) event.stopPropagation();
-            const node = state.nodes.find(n => n.id === nodeId);
-            if (!node || node.isRoot) return;
-
-            state.reparentingNodeId = nodeId;
-            $('#reparent-banner')?.classList.remove('hidden');
+        /* ==================== TOOLS / CONNECT / EDGE EDITING ==================== */
+        function setTool(tool, sticky = false) {
+            state.tool = tool;
+            state.connect = tool === 'connect' ? { from: null, sticky: !!sticky } : null;
+            if (tool === 'pen' || tool === 'text' || tool === 'erase') state.selectedEdgeId = null;
+            state.pen.drawing = null;
+            const cc = $('#canvas-container');
+            ['select', 'connect', 'pen', 'text', 'erase'].forEach(t => cc.classList.toggle('tool-' + t, t === tool));
+            $$('.tool-btn').forEach(b => {
+                const on = b.dataset.tool === tool;
+                b.classList.toggle('bg-indigo-600', on);
+                b.classList.toggle('text-white', on);
+                b.classList.toggle('text-slate-600', !on);
+            });
+            $('#pen-options')?.classList.toggle('hidden', !(tool === 'pen' || tool === 'text'));
+            updateConnectHint();
             renderCanvas();
-            showToast(`請點擊要將「${node.text}」掛載到的新父節點`, 'info');
-        };
-
-        window.detachToRoot = function(nodeId, event) {
-            if (event) event.stopPropagation();
-            const rootNode = state.nodes.find(n => n.isRoot);
-            if (rootNode) {
-                setParentNode(nodeId, rootNode.id);
-                showToast('已將節點提升至中心主題第一層', 'success');
-            }
-        };
-
-        function setParentNode(nodeId, newParentId) {
-            const node = state.nodes.find(n => n.id === nodeId);
-            const parent = state.nodes.find(n => n.id === newParentId);
-            if (!node || !parent || nodeId === newParentId) return;
-
-            if (isDescendant(nodeId, newParentId)) {
-                showToast('無法將節點連結至其子孫節點！', 'error');
-                return;
-            }
-
-            node.parentId = newParentId;
-
-            // Recalculate Branch Color
-            if (parent.isRoot) {
-                const rootBranches = state.nodes.filter(n => n.parentId === parent.id);
-                node.color = BRANCH_COLORS[rootBranches.length % BRANCH_COLORS.length];
-            } else {
-                node.color = parent.color;
-            }
-
-            renderCanvas();
-            showToast(`已將「${node.text}」的父階層變更為「${parent.text}」`, 'success');
         }
 
-        function cancelReparenting() {
-            state.reparentingNodeId = null;
-            $('#reparent-banner')?.classList.add('hidden');
+        function cancelReparenting() { setTool('select'); }
+
+        function updateConnectHint() {
+            const b = $('#reparent-banner');
+            if (!b) return;
+            if (state.tool !== 'connect') { b.classList.add('hidden'); return; }
+            b.classList.remove('hidden');
+            $('#connect-hint').textContent = state.connect && state.connect.from
+                ? '請點選「終點」：語詞卡，或任一條線上的位置（點空白處取消起點）'
+                : '連線模式：請點選「起點」（語詞卡，或任一條線上的位置）';
+        }
+
+        window.startConnect = function(nodeId, event) {
+            if (event) event.stopPropagation();
+            setTool('connect', false);
+            state.connect.from = { type: 'node', id: nodeId };
+            updateConnectHint();
             renderCanvas();
+        };
+
+        function refColor(ref) {
+            if (ref.type === 'node') {
+                const n = state.nodes.find(x => x.id === ref.id);
+                return n && !n.isRoot ? n.color : null;
+            }
+            const e = state.edges.find(x => x.id === ref.id);
+            return e ? e.color : null;
+        }
+
+        function pickConnectTarget(ref) {
+            const c = state.connect;
+            if (!c) return;
+            if (!c.from) { c.from = ref; updateConnectHint(); renderCanvas(); return; }
+            const from = c.from;
+            if (from.type === ref.type && from.id === ref.id) {
+                if (ref.type === 'node') { c.from = null; updateConnectHint(); renderCanvas(); }
+                else showToast('線不能連到自己', 'error');
+                return;
+            }
+            if (from.type === 'node' && ref.type === 'node' &&
+                state.edges.some(e => e.from.type === 'node' && e.to.type === 'node' &&
+                    ((e.from.id === from.id && e.to.id === ref.id) || (e.from.id === ref.id && e.to.id === from.id)))) {
+                showToast('這兩張語詞卡之間已經有連線了', 'error');
+                return;
+            }
+            const color = refColor(ref) || refColor(from) || '#64748b';
+            const edge = makeEdge(from, ref, color);
+            state.edges.push(edge);
+            state.selectedEdgeId = edge.id;
+            c.from = null;
+            if (c.sticky) { updateConnectHint(); renderCanvas(); }
+            else setTool('select');
+            showToast('已建立連線，可用浮動工具列設定箭頭與樣式', 'success');
+        }
+
+        function renderPreview(e) {
+            const grp = $('#svg-preview');
+            const c = state.connect;
+            if (!grp || !c || !c.from) return;
+            const a = refCenter(c.from, {}, 0);
+            if (!a) return;
+            const p = screenToCanvasPos(e.clientX, e.clientY);
+            grp.innerHTML = `<path d="M ${a.x} ${a.y} L ${p.x} ${p.y}" stroke="#10b981" stroke-width="3" stroke-dasharray="6 4" fill="none" stroke-linecap="round"/><circle cx="${a.x}" cy="${a.y}" r="5" fill="#10b981"/>`;
+        }
+
+        function onEdgeMouseDown(ev, id) {
+            ev.stopPropagation();
+            ev.preventDefault();
+            if (state.tool === 'select') { selectEdge(id); return; }
+            if (state.tool === 'connect') {
+                const g = edgeGeom(id, {}, 0);
+                if (!g) return;
+                const p = screenToCanvasPos(ev.clientX, ev.clientY);
+                const t = Math.min(0.95, Math.max(0.05, closestT(g, p)));
+                pickConnectTarget({ type: 'edge', id, t });
+            }
+        }
+
+        function selectEdge(id) {
+            state.selectedEdgeId = id;
+            renderCanvas();
+        }
+
+        function removeEdgeCascade(id) {
+            const ids = new Set([id]);
+            let changed = true;
+            while (changed) {
+                changed = false;
+                state.edges.forEach(e => {
+                    if (ids.has(e.id)) return;
+                    if ((e.from.type === 'edge' && ids.has(e.from.id)) || (e.to.type === 'edge' && ids.has(e.to.id))) {
+                        ids.add(e.id); changed = true;
+                    }
+                });
+            }
+            state.edges = state.edges.filter(e => !ids.has(e.id));
+            if (ids.has(state.selectedEdgeId)) state.selectedEdgeId = null;
+            return ids.size;
+        }
+
+        window.deleteEdge = function(id) {
+            const n = removeEdgeCascade(id);
+            renderCanvas();
+            showToast(n > 1 ? `已刪除連線（連同 ${n - 1} 條連在它上面的線）` : '已刪除連線');
+        };
+
+        function updateEdgeToolbar() {
+            const tb = $('#edge-toolbar');
+            if (!tb) return;
+            const e = state.edges.find(x => x.id === state.selectedEdgeId);
+            const g = e && !['pen', 'text', 'erase'].includes(state.tool) ? edgeGeom(e.id, {}, 0) : null;
+            if (!g) { tb.classList.add('hidden'); return; }
+            tb.classList.remove('hidden');
+            $('#et-start').value = e.startMarker || 'none';
+            $('#et-end').value = e.endMarker || 'none';
+            $('#et-color').value = /^#[0-9a-f]{6}$/i.test(e.color) ? e.color : '#64748b';
+            $('#et-dash').classList.toggle('bg-indigo-100', !!e.dash);
+            const mid = canvasToContainerPos(bez(g, 0.5));
+            const r = containerRect();
+            const w = tb.offsetWidth, h = tb.offsetHeight;
+            const left = Math.min(Math.max(8, mid.x - w / 2), Math.max(8, r.width - w - 8));
+            let top = mid.y - h - 14;
+            if (top < 110) top = mid.y + 14;
+            tb.style.left = left + 'px';
+            tb.style.top = top + 'px';
+        }
+
+        function setupToolUI() {
+            const cur = () => state.edges.find(x => x.id === state.selectedEdgeId);
+            $$('.tool-btn').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool, b.dataset.tool === 'connect')));
+
+            $('#et-start').addEventListener('change', (ev) => { const e = cur(); if (e) { e.startMarker = ev.target.value; renderCanvas(); } });
+            $('#et-end').addEventListener('change', (ev) => { const e = cur(); if (e) { e.endMarker = ev.target.value; renderCanvas(); } });
+            $('#et-color').addEventListener('input', (ev) => { const e = cur(); if (e) { e.color = ev.target.value; renderSVGConnections(); } });
+            $('#et-dash').addEventListener('click', () => { const e = cur(); if (e) { e.dash = !e.dash; renderCanvas(); } });
+            $('#et-swap').addEventListener('click', () => {
+                const e = cur(); if (!e) return;
+                [e.from, e.to] = [e.to, e.from];
+                [e.startMarker, e.endMarker] = [e.endMarker, e.startMarker];
+                renderCanvas();
+            });
+            $('#et-delete').addEventListener('click', () => { const e = cur(); if (e) deleteEdge(e.id); });
+
+            const updatePenUI = () => $$('.pen-color').forEach(b => {
+                const on = b.dataset.color === state.pen.color;
+                b.classList.toggle('ring-2', on);
+                b.classList.toggle('ring-offset-1', on);
+                b.classList.toggle('ring-slate-500', on);
+            });
+            $$('.pen-color').forEach(b => b.addEventListener('click', () => { state.pen.color = b.dataset.color; updatePenUI(); }));
+            $('#pen-width').addEventListener('change', (ev) => { state.pen.width = +ev.target.value; });
+            $('#pen-undo').addEventListener('click', () => { state.annotations.pop(); renderAnnotations(); });
+            $('#pen-clear').addEventListener('click', () => {
+                if (state.annotations.length && confirm('確定要清除全部手繪註記嗎？')) { state.annotations = []; renderAnnotations(); }
+            });
+            updatePenUI();
+
+            $('#btn-center-view')?.addEventListener('click', () => { centerViewport(); updateViewportTransform(); });
+
+            window.addEventListener('keydown', (e) => {
+                const tag = (e.target.tagName || '').toUpperCase();
+                if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+                if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedEdgeId) {
+                    e.preventDefault();
+                    deleteEdge(state.selectedEdgeId);
+                } else if (e.key === 'Escape') {
+                    if (state.tool !== 'select') setTool('select');
+                    else if (state.selectedEdgeId) selectEdge(null);
+                }
+            });
+
+            setTool('select');
         }
 
         /* ==================== AUTOMATIC RADIAL TREE LAYOUT ENGINE ==================== */
         function triggerAutoLayout() {
             const rootNode = state.nodes.find(n => n.isRoot);
             if (!rootNode) return;
-
-            // Build Tree Hierarchy
             const tree = buildTree(rootNode.id);
-
-            // Set Root at Center (0, 0)
             rootNode.x = 0;
             rootNode.y = 0;
-
-            // Layout Children Radially
-            layoutSubtree(tree, 0, Math.PI * 2, 300);
-
+            layoutSubtree(tree, 0, Math.PI * 2, 180);
+            centerViewport();
             renderCanvas();
-            centerOnRoot();
-            showToast('已完成自動階層排版！', 'success');
+            showToast('已完成自動階層排版！（以連線關係為準，未連到中心的語詞卡不會移動）', 'success');
         }
 
-        function buildTree(nodeId) {
-            const node = state.nodes.find(n => n.id === nodeId);
-            const children = state.nodes.filter(n => n.parentId === nodeId);
-            return {
-                node: node,
-                children: children.map(c => buildTree(c.id))
+        // Spanning tree built from node-to-node edges (cross links are ignored for layout)
+        function buildTree(rootId) {
+            const seen = new Set([rootId]);
+            const build = (id) => {
+                const kids = [];
+                state.edges.forEach(e => {
+                    if (e.from.type !== 'node' || e.to.type !== 'node') return;
+                    const other = e.from.id === id ? e.to.id : (e.to.id === id ? e.from.id : null);
+                    if (other && !seen.has(other)) { seen.add(other); kids.push(other); }
+                });
+                return { node: state.nodes.find(n => n.id === id), children: kids.map(build) };
             };
+            return build(rootId);
         }
 
         function layoutSubtree(treeNode, startAngle, endAngle, radius) {
             const children = treeNode.children;
             if (children.length === 0) return;
-
             const angleStep = (endAngle - startAngle) / children.length;
-
             children.forEach((childTree, i) => {
                 const angle = startAngle + angleStep * i + angleStep / 2;
                 const childNode = childTree.node;
-
                 childNode.x = treeNode.node.x + Math.cos(angle) * radius;
-                childNode.y = treeNode.node.y + Math.sin(angle) * radius * 0.85; // Aspect adjustment
-
-                // Recursively layout sub-children in a wedge angle
+                childNode.y = treeNode.node.y + Math.sin(angle) * radius * 0.75;
                 const wedge = angleStep * 0.8;
-                layoutSubtree(childTree, angle - wedge / 2, angle + wedge / 2, radius + 240);
+                layoutSubtree(childTree, angle - wedge / 2, angle + wedge / 2, radius + 140);
             });
         }
 
         /* ==================== EXPORT MIND MAP ==================== */
-        // Export Mind Map Image (PNG/SVG)
         function exportMindMap(format = 'png') {
             if (state.nodes.length === 0) {
                 showToast('畫布無語詞卡，無法匯出', 'error');
                 return;
             }
-
-            const meas = document.createElement('canvas').getContext('2d');
-            const items = state.nodes.map(n => {
-                const fs = n.isRoot ? 24 : 20;
-                meas.font = `${n.isRoot ? 'bold ' : ''}${fs}px sans-serif`;
-                return { n, fs, w: Math.max(140, Math.ceil(meas.measureText(n.text).width) + 48), h: 52 };
-            });
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            items.forEach(({ n, w, h }) => {
-                minX = Math.min(minX, n.x - w / 2); maxX = Math.max(maxX, n.x + w / 2);
-                minY = Math.min(minY, n.y - h / 2); maxY = Math.max(maxY, n.y + h / 2);
+            const grow = (x, y) => { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); };
+            state.nodes.forEach(n => { const s = nodeSize(n); grow(n.x, n.y); grow(n.x + s.w, n.y + s.h); });
+            state.annotations.forEach(a => {
+                if (a.kind === 'stroke') a.pts.forEach(p => grow(p.x, p.y));
+                else { grow(a.x, a.y - a.size); grow(a.x + a.text.length * a.size, a.y + 4); }
             });
-            const padding = 60;
-            minX -= padding; minY -= padding;
-            const width = Math.max(400, maxX - minX + padding);
-            const height = Math.max(300, maxY - minY + padding);
+            const pad = 60;
+            minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+            const width = Math.max(400, maxX - minX), height = Math.max(300, maxY - minY);
 
-            let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${minX} ${minY} ${width} ${height}">`;
-            svgString += `<rect x="${minX}" y="${minY}" width="${width}" height="${height}" fill="#ffffff" />`;
+            let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${minX} ${minY} ${width} ${height}">`;
+            svg += `<rect x="${minX}" y="${minY}" width="${width}" height="${height}" fill="#ffffff" />`;
+
+            const memo = {};
+            state.edges.forEach(e => { const g = edgeGeom(e.id, memo, 0); if (g) svg += edgeSvgString(e, g, true); });
 
             state.nodes.forEach(node => {
-                const parent = node.parentId && state.nodes.find(n => n.id === node.parentId);
-                if (!parent) return;
-                const dx = node.x - parent.x;
-                const d = `M ${parent.x} ${parent.y} C ${parent.x + dx * 0.5} ${parent.y}, ${parent.x + dx * 0.5} ${node.y}, ${node.x} ${node.y}`;
-                svgString += `<path d="${d}" fill="none" stroke="${node.color || '#94a3b8'}" stroke-width="3" opacity="0.9" />`;
-            });
-
-            items.forEach(({ n, fs, w, h }) => {
-                const fill = n.isRoot ? '#4f46e5' : '#ffffff';
-                const textFill = n.isRoot ? '#ffffff' : '#1e293b';
-                const stroke = n.isRoot ? '#4338ca' : (n.color || '#cbd5e1');
-                svgString += `<g transform="translate(${n.x - w / 2}, ${n.y - h / 2})">
-                    <rect width="${w}" height="${h}" rx="14" fill="${fill}" stroke="${stroke}" stroke-width="${n.isRoot ? 0 : 2}" />
-                    <text x="${w / 2}" y="${h / 2 + fs * 0.35}" text-anchor="middle" fill="${textFill}" font-family="sans-serif" font-size="${fs}" font-weight="${n.isRoot ? 'bold' : 'normal'}">${escapeXml(n.text)}</text>
+                const sz = nodeSize(node);
+                const fill = node.isRoot ? '#4f46e5' : '#ffffff';
+                const textFill = node.isRoot ? '#ffffff' : '#1e293b';
+                const stroke = node.isRoot ? '#4338ca' : (node.color || '#cbd5e1');
+                svg += `<g transform="translate(${node.x}, ${node.y})">
+                    <rect width="${sz.w}" height="${sz.h}" rx="10" fill="${fill}" stroke="${stroke}" stroke-width="${node.isRoot ? 0 : 2}" />
+                    <text x="${sz.w / 2}" y="${sz.h / 2}" text-anchor="middle" dominant-baseline="central" fill="${textFill}" font-family="sans-serif" font-size="13" font-weight="${node.isRoot ? 'bold' : 'normal'}">${escapeXml(node.text)}</text>
                 </g>`;
             });
-            svgString += `</svg>`;
+
+            state.annotations.forEach(a => { svg += annotationSvg(a, false); });
+            svg += `</svg>`;
 
             if (format === 'svg') {
-                const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-                downloadBlob(blob, '心智圖-語詞卡.svg');
+                downloadBlob(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }), '心智圖-語詞卡.svg');
                 showToast('已匯出 SVG 向量圖檔', 'success');
             } else {
-                // Convert SVG to Canvas PNG
                 const img = new Image();
-                const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-                const url = URL.createObjectURL(svgBlob);
-
+                const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const scale = 2; // HD Quality
+                    const scale = 2;
                     canvas.width = width * scale;
                     canvas.height = height * scale;
                     const ctx = canvas.getContext('2d');
                     ctx.scale(scale, scale);
-                    ctx.drawImage(img, 0, 0);
-
+                    ctx.drawImage(img, 0, 0, width, height);
                     canvas.toBlob(function(blob) {
                         downloadBlob(blob, '心智圖-語詞卡.png');
                         URL.revokeObjectURL(url);
@@ -1284,6 +1408,8 @@
                 const nonRoots = state.nodes.filter(n => !n.isRoot);
                 nonRoots.forEach(n => state.unassignedWords.push({ id: n.id, text: n.text }));
                 state.nodes = rootNode ? [rootNode] : [];
+                state.edges = [];
+                state.selectedEdgeId = null;
                 renderWordBank();
                 renderCanvas();
                 showToast('已清空心智圖畫布，語詞已回收至語詞庫');
@@ -1291,14 +1417,16 @@
 
             // Canvas Zoom Controls
             $('#btn-zoom-in')?.addEventListener('click', () => {
-                zoomBy(1.2);
+                state.viewport.zoom = Math.min(2.5, state.viewport.zoom * 1.2);
+                updateViewportTransform();
             });
             $('#btn-zoom-out')?.addEventListener('click', () => {
-                zoomBy(1 / 1.2);
+                state.viewport.zoom = Math.max(0.25, state.viewport.zoom / 1.2);
+                updateViewportTransform();
             });
-            $('#btn-center-view')?.addEventListener('click', () => centerOnRoot(true));
             $('#btn-re-center')?.addEventListener('click', () => {
-                centerOnRoot(true);
+                centerViewport();
+                updateViewportTransform();
             });
 
             // Direct Word Input in Sidebar
@@ -1333,12 +1461,12 @@
                     const toggleIcon = $('#left-toggle-icon');
                     if (sidebarOpen) {
                         leftSidebar.style.marginLeft = '0px';
-                        toggleLeftBtn.style.left = '320px';
-                        if (toggleIcon) toggleIcon.className = 'fa-solid fa-chevron-left text-base';
+                        toggleLeftBtn.style.left = '288px';
+                        if (toggleIcon) toggleIcon.className = 'fa-solid fa-chevron-left text-xs';
                     } else {
-                        leftSidebar.style.marginLeft = '-320px';
+                        leftSidebar.style.marginLeft = '-288px';
                         toggleLeftBtn.style.left = '0px';
-                        if (toggleIcon) toggleIcon.className = 'fa-solid fa-chevron-right text-base';
+                        if (toggleIcon) toggleIcon.className = 'fa-solid fa-chevron-right text-xs';
                     }
                 });
             }
@@ -1351,15 +1479,15 @@
 
             if (tabText && tabFile && contentText && contentFile) {
                 tabText.addEventListener('click', () => {
-                    tabText.className = 'py-3 px-4 text-base font-bold border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2';
-                    tabFile.className = 'py-3 px-4 text-base font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2 border-b-2 border-transparent';
+                    tabText.className = 'py-3 px-4 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2';
+                    tabFile.className = 'py-3 px-4 text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2 border-b-2 border-transparent';
                     contentText.classList.remove('hidden');
                     contentFile.classList.add('hidden');
                 });
 
                 tabFile.addEventListener('click', () => {
-                    tabFile.className = 'py-3 px-4 text-base font-bold border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2';
-                    tabText.className = 'py-3 px-4 text-base font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2 border-b-2 border-transparent';
+                    tabFile.className = 'py-3 px-4 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600 flex items-center gap-2';
+                    tabText.className = 'py-3 px-4 text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2 border-b-2 border-transparent';
                     contentFile.classList.remove('hidden');
                     contentText.classList.add('hidden');
                 });
